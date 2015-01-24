@@ -29,8 +29,8 @@ goog.provide('Blockly.Flyout');
 goog.require('Blockly.Block');
 goog.require('Blockly.Comment');
 goog.require('Blockly.WorkspaceSvg');
-goog.require('goog.userAgent');
 goog.require('goog.math.Rect');
+goog.require('goog.userAgent');
 
 
 /**
@@ -201,6 +201,7 @@ Blockly.Flyout.prototype.setMetrics_ = function(yRatio) {
  */
 Blockly.Flyout.prototype.init = function(workspace) {
   this.targetWorkspace_ = workspace;
+  this.workspace_.targetWorkspace = workspace;
   // Add scrollbar.
   this.scrollbar_ = new Blockly.Scrollbar(this.workspace_, false, false);
 
