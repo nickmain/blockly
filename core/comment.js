@@ -90,10 +90,14 @@ Blockly.Comment.prototype.createEditor_ = function() {
   body.className = 'blocklyMinimalBody';
   this.textarea_ = document.createElementNS(Blockly.HTML_NS, 'textarea');
   this.textarea_.className = 'blocklyCommentTextarea';
-  this.textarea_.setAttribute('dir', Blockly.RTL ? 'RTL' : 'LTR');
+  this.textarea_.setAttribute('dir', this.block_.RTL ? 'RTL' : 'LTR');
   body.appendChild(this.textarea_);
   this.foreignObject_.appendChild(body);
   Blockly.bindEvent_(this.textarea_, 'mouseup', this, this.textareaFocus_);
+  // Don't zoom with mousewheel.
+  Blockly.bindEvent_(this.textarea_, 'wheel', this, function(e) {
+    e.stopPropagation();
+  });
   return this.foreignObject_;
 };
 
