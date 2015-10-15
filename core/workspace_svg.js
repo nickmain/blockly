@@ -62,7 +62,7 @@ Blockly.WorkspaceSvg = function(options) {
 
   /**
    * Opaque data that can be passed to Blockly.unbindEvent_.
-   * @type {Array.<!Array>}
+   * @type {!Array.<!Array>}
    * @private
    */
   this.eventWrappers_ = [];
@@ -132,7 +132,7 @@ Blockly.WorkspaceSvg.prototype.trashcan = null;
 Blockly.WorkspaceSvg.prototype.scrollbar = null;
 
 /**
- * Create the trash can elements.
+ * Create the workspace DOM elements.
  * @param {string=} opt_backgroundClass Either 'blocklyMainBackground' or
  *     'blocklyMutatorBackground'.
  * @return {!Element} The workspace's SVG group.
@@ -148,7 +148,7 @@ Blockly.WorkspaceSvg.prototype.createDom = function(opt_backgroundClass) {
   </g>
   */
   this.svgGroup_ = Blockly.createSvgElement('g',
-    {'class': 'blocklyWorkspace'}, null);
+      {'class': 'blocklyWorkspace'}, null);
   if (opt_backgroundClass) {
     this.svgBackground_ = Blockly.createSvgElement('rect',
         {'height': '100%', 'width': '100%',
@@ -649,6 +649,25 @@ Blockly.WorkspaceSvg.prototype.onMouseWheel_ = function(e) {
 };
 
 /**
+ * Clean up the workspace by ordering all the blocks in a column.
+ * @private
+ */
+Blockly.WorkspaceSvg.prototype.cleanUp_ = function() {
+  var topBlocks = this.getTopBlocks(true);
+  var cursorY = 0;
+  for (var i = 0, block; block = topBlocks[i]; i++) {
+    var xy = block.getRelativeToSurfaceXY();
+    block.moveBy(-xy.x, cursorY - xy.y);
+    block.snapToGrid();
+    cursorY = block.getRelativeToSurfaceXY().y +
+        block.getHeightWidth().height + Blockly.BlockSvg.MIN_BLOCK_Y;
+  }
+  // Fire an event to allow scrollbars to resize.
+  Blockly.fireUiEvent(window, 'resize');
+  this.fireChangeEvent();
+};
+
+/**
  * Show the context menu for the workspace.
  * @param {!Event} e Mouse event.
  * @private
@@ -658,13 +677,19 @@ Blockly.WorkspaceSvg.prototype.showContextMenu_ = function(e) {
     return;
   }
   var menuOptions = [];
+  var topBlocks = this.getTopBlocks(true);
+  // Option to clean up blocks.
+  var cleanOption = {};
+  cleanOption.text = Blockly.Msg.CLEAN_UP;
+  cleanOption.enabled = topBlocks.length > 1;
+  cleanOption.callback = this.cleanUp_.bind(this);
+  menuOptions.push(cleanOption);
+
   // Add a little animation to collapsing and expanding.
   var COLLAPSE_DELAY = 10;
-
   if (this.options.collapse) {
     var hasCollapsedBlocks = false;
     var hasExpandedBlocks = false;
-    var topBlocks = this.getTopBlocks(true);
     for (var i = 0; i < topBlocks.length; i++) {
       var block = topBlocks[i];
       while (block) {
@@ -677,19 +702,28 @@ Blockly.WorkspaceSvg.prototype.showContextMenu_ = function(e) {
       }
     }
 
-    // Option to collapse top blocks.
-    var collapseOption = {enabled: hasExpandedBlocks};
-    collapseOption.text = Blockly.Msg.COLLAPSE_ALL;
-    collapseOption.callback = function() {
+    /*
+     * Option to collapse or expand top blocks
+     * @param {boolean} shouldCollapse Whether a block should collapse.
+     * @private
+     */
+    var toggleOption = function(shouldCollapse) {
       var ms = 0;
       for (var i = 0; i < topBlocks.length; i++) {
         var block = topBlocks[i];
         while (block) {
-          setTimeout(block.setCollapsed.bind(block, true), ms);
+          setTimeout(block.setCollapsed.bind(block, shouldCollapse), ms);
           block = block.getNextBlock();
           ms += COLLAPSE_DELAY;
         }
       }
+    };
+
+    // Option to collapse top blocks.
+    var collapseOption = {enabled: hasExpandedBlocks};
+    collapseOption.text = Blockly.Msg.COLLAPSE_ALL;
+    collapseOption.callback = function() {
+      toggleOption(true);
     };
     menuOptions.push(collapseOption);
 
@@ -697,15 +731,7 @@ Blockly.WorkspaceSvg.prototype.showContextMenu_ = function(e) {
     var expandOption = {enabled: hasCollapsedBlocks};
     expandOption.text = Blockly.Msg.EXPAND_ALL;
     expandOption.callback = function() {
-      var ms = 0;
-      for (var i = 0; i < topBlocks.length; i++) {
-        var block = topBlocks[i];
-        while (block) {
-          setTimeout(block.setCollapsed.bind(block, false), ms);
-          block = block.getNextBlock();
-          ms += COLLAPSE_DELAY;
-        }
-      }
+      toggleOption(false);
     };
     menuOptions.push(expandOption);
   }
@@ -832,7 +858,7 @@ Blockly.WorkspaceSvg.prototype.updateToolbox = function(tree) {
  */
 Blockly.WorkspaceSvg.prototype.addChangeListener = function(func) {
   var wrapper = Blockly.bindEvent_(this.getCanvas(),
-                            'blocklyWorkspaceChange', null, func);
+      'blocklyWorkspaceChange', null, func);
   Array.prototype.push.apply(this.eventWrappers_, wrapper);
   return wrapper;
 };
@@ -853,7 +879,11 @@ Blockly.WorkspaceSvg.prototype.removeChangeListener = function(bindData) {
  * Mark this workspace as the currently focused main workspace.
  */
 Blockly.WorkspaceSvg.prototype.markFocused = function() {
-  Blockly.mainWorkspace = this;
+  if (this.options.parentWorkspace) {
+    this.options.parentWorkspace.markFocused();
+  } else {
+    Blockly.mainWorkspace = this;
+  }
 };
 
 /**
@@ -913,18 +943,26 @@ Blockly.WorkspaceSvg.prototype.zoomCenter = function(type) {
 
 /**
  * Reset zooming and dragging.
+ * @param {!Event} e Mouse down event.
  */
-Blockly.WorkspaceSvg.prototype.zoomReset = function() {
+Blockly.WorkspaceSvg.prototype.zoomReset = function(e) {
   this.scale = 1;
   this.updateGridPattern_();
-  var metrics = this.getMetrics();
-  this.scrollbar.set((metrics.contentWidth - metrics.viewWidth) / 2,
-                     (metrics.contentHeight - metrics.viewHeight) / 2);
   Blockly.hideChaff(false);
   if (this.flyout_) {
     // No toolbox, resize flyout.
     this.flyout_.reflow();
   }
+  // Zoom level has changed, update the scrollbars.
+  if (this.scrollbar) {
+    this.scrollbar.resize();
+  }
+  // Center the workspace.
+  var metrics = this.getMetrics();
+  this.scrollbar.set((metrics.contentWidth - metrics.viewWidth) / 2,
+      (metrics.contentHeight - metrics.viewHeight) / 2);
+  // This event has been handled.  Don't start a workspace drag.
+  e.stopPropagation();
 };
 
 /**
