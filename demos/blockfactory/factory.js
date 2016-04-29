@@ -99,8 +99,8 @@ function updateLanguage() {
  */
 function formatJson_(blockType, rootBlock) {
   var JS = {};
-  // ID is not used by Blockly, but may be used by a loader.
-  JS.id = blockType;
+  // Type is not used by Blockly, but may be used by a loader.
+  JS.type = blockType;
   // Generate inputs.
   var message = [];
   var args = [];
@@ -702,7 +702,6 @@ function updatePreview() {
  * @param {string} id ID of <pre> element to inject into.
  */
 function injectCode(code, id) {
-  Blockly.removeAllRanges();
   var pre = document.getElementById(id);
   pre.textContent = code;
   code = pre.innerHTML;
@@ -787,7 +786,7 @@ function init() {
                                mainWorkspace);
   } else {
     var xml = '<xml><block type="factory_base" deletable="false" movable="false"></block></xml>';
-    Blockly.Xml.domToWorkspace(mainWorkspace, Blockly.Xml.textToDom(xml));
+    Blockly.Xml.domToWorkspace(Blockly.Xml.textToDom(xml), mainWorkspace);
   }
   mainWorkspace.clearUndo();
 

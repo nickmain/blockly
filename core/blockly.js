@@ -103,7 +103,7 @@ Blockly.clipboardSource_ = null;
  * 2 - Freely draggable.
  * @private
  */
-Blockly.dragMode_ = 0;
+Blockly.dragMode_ = Blockly.DRAG_NONE;
 
 /**
  * Wrapper function called when a touch mouseUp occurs during a drag operation.
@@ -170,7 +170,7 @@ Blockly.onMouseUp_ = function(e) {
   var workspace = Blockly.getMainWorkspace();
   Blockly.Css.setCursor(Blockly.Css.Cursor.OPEN);
   workspace.isScrolling = false;
-
+  Blockly.setPageSelectable(true);
   // Unbind the touch event if it exists.
   if (Blockly.onTouchUpWrapper_) {
     Blockly.unbindEvent_(Blockly.onTouchUpWrapper_);
@@ -193,7 +193,6 @@ Blockly.onMouseMove_ = function(e) {
   }
   var workspace = Blockly.getMainWorkspace();
   if (workspace.isScrolling) {
-    Blockly.removeAllRanges();
     var dx = e.clientX - workspace.startDragMouseX;
     var dy = e.clientY - workspace.startDragMouseY;
     var metrics = workspace.startDragMetrics;
@@ -223,7 +222,8 @@ Blockly.onMouseMove_ = function(e) {
  * @private
  */
 Blockly.onKeyDown_ = function(e) {
-  if (Blockly.isTargetInput_(e)) {
+  if (Blockly.mainWorkspace.options.readOnly || Blockly.isTargetInput_(e)) {
+    // No key actions on readonly workspaces.
     // When focused on an HTML text input widget, don't trap any keys.
     return;
   }
@@ -233,15 +233,12 @@ Blockly.onKeyDown_ = function(e) {
     Blockly.hideChaff();
   } else if (e.keyCode == 8 || e.keyCode == 46) {
     // Delete or backspace.
-    try {
-      if (Blockly.selected && Blockly.selected.isDeletable()) {
-        deleteBlock = true;
-      }
-    } finally {
-      // Stop the browser from going back to the previous page.
-      // Use a finally so that any error in delete code above doesn't disappear
-      // from the console when the page rolls back.
-      e.preventDefault();
+    // Stop the browser from going back to the previous page.
+    // Do this first to prevent an error in the delete code from resulting in
+    // data loss.
+    e.preventDefault();
+    if (Blockly.selected && Blockly.selected.isDeletable()) {
+      deleteBlock = true;
     }
   } else if (e.altKey || e.ctrlKey || e.metaKey) {
     if (Blockly.selected &&
@@ -269,13 +266,15 @@ Blockly.onKeyDown_ = function(e) {
   }
   if (deleteBlock) {
     // Common code for delete and cut.
+    Blockly.Events.setGroup(true);
     Blockly.hideChaff();
-    var heal = Blockly.dragMode_ != 2;
+    var heal = Blockly.dragMode_ != Blockly.DRAG_FREE;
     Blockly.selected.dispose(heal, true);
     if (Blockly.highlightedConnection_) {
       Blockly.highlightedConnection_.unhighlight();
       Blockly.highlightedConnection_ = null;
     }
+    Blockly.Events.setGroup(false);
   }
 };
 
@@ -332,7 +331,7 @@ Blockly.longStop_ = function() {
  */
 Blockly.copy_ = function(block) {
   var xmlBlock = Blockly.Xml.blockToDom(block);
-  if (Blockly.dragMode_ != 2) {
+  if (Blockly.dragMode_ != Blockly.DRAG_FREE) {
     Blockly.Xml.deleteNext(xmlBlock);
   }
   // Encode start position in XML.
