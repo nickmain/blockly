@@ -52,7 +52,8 @@ Blockly.Blocks['text'] = {
     // Text block is trivial.  Use tooltip of parent block if it exists.
     this.setTooltip(function() {
       var parent = thisBlock.getParent();
-      return (parent && parent.tooltip) || Blockly.Msg.TEXT_TEXT_TOOLTIP;
+      return (parent && parent.getInputsInline() && parent.tooltip) ||
+          Blockly.Msg.TEXT_TEXT_TOOLTIP;
     });
   },
   /**
@@ -643,7 +644,7 @@ Blockly.Blocks['text_prompt'] = {
     var TYPES =
         [[Blockly.Msg.TEXT_PROMPT_TYPE_TEXT, 'TEXT'],
          [Blockly.Msg.TEXT_PROMPT_TYPE_NUMBER, 'NUMBER']];
-    // Assign 'this' to a variable for use in the closure below.
+    // Assign 'this' to a variable for use in the closures below.
     var thisBlock = this;
     this.setHelpUrl(Blockly.Msg.TEXT_PROMPT_HELPURL);
     this.setColour(Blockly.Blocks.texts.HUE);
@@ -656,8 +657,6 @@ Blockly.Blocks['text_prompt'] = {
         .appendField(new Blockly.FieldTextInput(''), 'TEXT')
         .appendField(this.newQuote_(false));
     this.setOutput(true, 'String');
-    // Assign 'this' to a variable for use in the tooltip closure below.
-    var thisBlock = this;
     this.setTooltip(function() {
       return (thisBlock.getFieldValue('TYPE') == 'TEXT') ?
           Blockly.Msg.TEXT_PROMPT_TOOLTIP_TEXT :

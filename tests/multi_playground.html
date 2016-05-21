@@ -1,89 +1,176 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="utf-8">
-  <meta name="google" value="notranslate">
-  <title>Blockly Demo:</title>
-  <link rel="stylesheet" href="style.css">
-  <script src="/storage.js"></script>
-  <script src="../../blockly_compressed.js"></script>
-  <script src="../../blocks_compressed.js"></script>
-  <script src="../../javascript_compressed.js"></script>
-  <script src="../../python_compressed.js"></script>
-  <script src="../../php_compressed.js"></script>
-  <script src="../../lua_compressed.js"></script>
-  <script src="../../dart_compressed.js"></script>
-  <script src="code.js"></script>
+<meta charset="utf-8">
+<title>Multi-toolbox Playground</title>
+<script src="../blockly_uncompressed.js"></script>
+<script src="../msg/messages.js"></script>
+<script src="../blocks/logic.js"></script>
+<script src="../blocks/loops.js"></script>
+<script src="../blocks/math.js"></script>
+<script src="../blocks/text.js"></script>
+<script src="../blocks/lists.js"></script>
+<script src="../blocks/colour.js"></script>
+<script src="../blocks/variables.js"></script>
+<script src="../blocks/procedures.js"></script>
+<script>
+'use strict';
+
+function start() {
+  startBlocklyInstance('VertStartLTR', false, false, 'start');
+  startBlocklyInstance('VertStartRTL', true, false, 'start');
+
+  startBlocklyInstance('VertEndLTR', false, false, 'end');
+  startBlocklyInstance('VertEndRTL', true, false, 'end');
+
+
+  startBlocklyInstance('HorizontalStartLTR', false, true, 'start');
+  startBlocklyInstance('HorizontalStartRTL', true, true, 'start');
+
+  startBlocklyInstance('HorizontalEndLTR', false, true, 'end');
+  startBlocklyInstance('HorizontalEndRTL', true, true, 'end');
+}
+
+function startBlocklyInstance(suffix, rtl, horizontalLayout, position) {
+  var toolbox = document.getElementById('toolbox_categoriesScroll');
+  var options = {
+    comments: false,
+    disable: false,
+    collapse: false,
+    maxBlocks: Infinity,
+    media: '../media/',
+    readOnly: false,
+    rtl: rtl,
+    scrollbars: true,
+    toolbox: toolbox,
+    trashcan: true,
+    horizontalLayout: horizontalLayout,
+    toolboxPosition: position,
+    zoom: {
+      controls: true,
+      wheel: false,
+      startScale: 1.0,
+      maxScale: 4,
+      minScale: 0.25,
+      scaleSpeed: 1.1
+    },
+  };
+  Blockly.inject('blocklyDiv' + suffix, options);
+}
+
+</script>
+
+<style>
+html, body {
+  height: 100%;
+}
+body {
+  background-color: #fff;
+  font-family: sans-serif;
+}
+h1 {
+  font-weight: normal;
+  font-size: 140%;
+}
+#blocklyDiv {
+  float: right;
+  height: 95%;
+  width: 70%;
+}
+#collaborators {
+  float: right;
+  width: 30px;
+  margin-left: 10px;
+}
+#collaborators > img {
+  margin-right: 5px;
+  height: 30px;
+  padding-bottom: 5px;
+  width: 30px;
+  border-radius: 3px;
+}
+#importExport {
+  font-family: monospace;
+}
+</style>
 </head>
-<body>
-  <table width="100%" height="100%">
+<body onload="start()">
+
+  <div id="collaborators"></div>
+  <table>
     <tr>
+      <td/>
+      <td>LTR</td>
+      <td>RTL</td>
+    </tr>
+    <tr>
+      <td>Vertical layout; toolbox at start</td>
       <td>
-        <h1><a href="https://developers.google.com/blockly/">Blockly</a>&rlm; &gt;
-          <a href="../index.html">Demos</a>&rlm; &gt;
-          <span id="title">...</span>
-        </h1>
+        <div id="blocklyDivVertStartLTR" style="height: 480px; width: 600px;"></div>
       </td>
-      <td class="farSide">
-        <select id="languageMenu"></select>
+      <td>
+        <div id="blocklyDivVertStartRTL" style="height: 480px; width: 600px;"></div>
       </td>
     </tr>
     <tr>
-      <td colspan=2>
-        <table width="100%">
-          <tr id="tabRow" height="1em">
-            <td id="tab_blocks" class="tabon">...</td>
-            <td class="tabmin">&nbsp;</td>
-            <td id="tab_javascript" class="taboff">JavaScript</td>
-            <td class="tabmin">&nbsp;</td>
-            <td id="tab_python" class="taboff">Python</td>
-            <td class="tabmin">&nbsp;</td>
-            <td id="tab_php" class="taboff">PHP</td>
-            <td class="tabmin">&nbsp;</td>
-            <td id="tab_lua" class="taboff">Lua</td>
-            <td class="tabmin">&nbsp;</td>
-            <td id="tab_dart" class="taboff">Dart</td>
-            <td class="tabmin">&nbsp;</td>
-            <td id="tab_xml" class="taboff">XML</td>
-            <td class="tabmax">
-              <button id="trashButton" class="notext" title="...">
-                <img src='../../media/1x1.gif' class="trash icon21">
-              </button>
-              <button id="linkButton" class="notext" title="...">
-                <img src='../../media/1x1.gif' class="link icon21">
-              </button>
-              <button id="runButton" class="notext primary" title="...">
-                <img src='../../media/1x1.gif' class="run icon21">
-              </button>
-            </td>
-          </tr>
-        </table>
+      <td>Vertical layout; toolbox at end</td>
+      <td>
+        <div id="blocklyDivVertEndLTR" style="height: 480px; width: 600px;"></div>
+      </td>
+      <td>
+        <div id="blocklyDivVertEndRTL" style="height: 480px; width: 600px;"></div>
       </td>
     </tr>
     <tr>
-      <td height="99%" colspan=2 id="content_area">
+      <td>Horizontal layout; toolbox at start</td>
+      <td>
+        <div id="blocklyDivHorizontalStartLTR" style="height: 480px; width: 600px;"></div>
+      </td>
+      <td>
+        <div id="blocklyDivHorizontalStartRTL" style="height: 480px; width: 600px;"></div>
+      </td>
+    </tr>
+    <tr>
+      <td>Horizontal layout; toolbox at end</td>
+      <td>
+        <div id="blocklyDivHorizontalEndLTR" style="height: 480px; width: 600px;"></div>
+      </td>
+      <td>
+        <div id="blocklyDivHorizontalEndRTL" style="height: 480px; width: 600px;"></div>
       </td>
     </tr>
   </table>
-  <div id="content_blocks" class="content"></div>
-  <pre id="content_javascript" class="content"></pre>
-  <pre id="content_python" class="content"></pre>
-  <pre id="content_php" class="content"></pre>
-  <pre id="content_lua" class="content"></pre>
-  <pre id="content_dart" class="content"></pre>
-  <textarea id="content_xml" class="content" wrap="off"></textarea>
 
-  <xml id="toolbox" style="display: none">
-    <category id="catLogic" colour="210">
+  <xml id="toolbox_alwaysOpen" style="display: none">
+    <block type="controls_if"></block>
+    <block type="logic_compare"></block>
+    <!-- <block type="control_repeat"></block> -->
+    <block type="logic_operation"></block>
+    <block type="controls_repeat_ext">
+      <value name="TIMES">
+        <shadow type="math_number">
+          <field name="NUM">10</field>
+        </shadow>
+      </value>
+    </block>
+    <block type="logic_operation"></block>
+    <block type="logic_negate"></block>
+    <block type="logic_boolean"></block>
+    <block type="logic_null" disabled="true"></block>
+    <block type="logic_ternary"></block>
+  </xml>
+
+  <xml id="toolbox_categoriesScroll" style="display: none">
+     <category name="Logic" colour="210">
       <block type="controls_if"></block>
       <block type="logic_compare"></block>
       <block type="logic_operation"></block>
       <block type="logic_negate"></block>
       <block type="logic_boolean"></block>
-      <block type="logic_null"></block>
+      <block type="logic_null" disabled="true"></block>
       <block type="logic_ternary"></block>
     </category>
-    <category id="catLoops" colour="120">
+    <category name="Loops" colour="120">
       <block type="controls_repeat_ext">
         <value name="TIMES">
           <shadow type="math_number">
@@ -91,6 +178,7 @@
           </shadow>
         </value>
       </block>
+      <block type="controls_repeat" disabled="true"></block>
       <block type="controls_whileUntil"></block>
       <block type="controls_for">
         <value name="FROM">
@@ -112,8 +200,8 @@
       <block type="controls_forEach"></block>
       <block type="controls_flow_statements"></block>
     </category>
-    <category id="catMath" colour="230">
-      <block type="math_number"></block>
+    <category name="Math" colour="230">
+      <block type="math_number" gap="32"></block>
       <block type="math_arithmetic">
         <value name="A">
           <shadow type="math_number">
@@ -206,7 +294,7 @@
       </block>
       <block type="math_random_float"></block>
     </category>
-    <category id="catText" colour="160">
+    <category name="Text" colour="160">
       <block type="text"></block>
       <block type="text_join"></block>
       <block type="text_append">
@@ -283,7 +371,7 @@
         </value>
       </block>
     </category>
-    <category id="catLists" colour="260">
+    <category name="Lists" colour="260">
       <block type="lists_create_with">
         <mutation items="0"></mutation>
       </block>
@@ -332,9 +420,8 @@
           </shadow>
         </value>
       </block>
-      <block type="lists_sort"></block>
     </category>
-    <category id="catColour" colour="20">
+    <category name="Colour" colour="20">
       <block type="colour_picker"></block>
       <block type="colour_random"></block>
       <block type="colour_rgb">
@@ -373,9 +460,8 @@
       </block>
     </category>
     <sep></sep>
-    <category id="catVariables" colour="330" custom="VARIABLE"></category>
-    <category id="catFunctions" colour="290" custom="PROCEDURE"></category>
+    <category name="Variables" colour="330" custom="VARIABLE"></category>
+    <category name="Functions" colour="290" custom="PROCEDURE"></category>
   </xml>
-
 </body>
 </html>
