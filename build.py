@@ -43,16 +43,6 @@ if sys.version_info[0] != 2:
 
 import errno, glob, httplib, json, os, re, subprocess, threading, urllib
 
-import getopt
-import requests
-opts , args = getopt.getopt(sys.argv[1:], "hp:")
-proxy_url = False
-for op, value in opts:
-  if op == '-h':
-    print('-p <proxy_url>    Compile via <proxy_url>, example: python build.py -p 127.0.0.1:8787')
-    sys.exit()
-  elif op == '-p':
-    proxy_url = value
 
 def import_path(fullpath):
   """Import a file with full path specification.
@@ -123,7 +113,7 @@ window.BLOCKLY_BOOT = function() {
     // Execute after Closure has loaded.
     if (!window.goog) {
       alert('Error: Closure not found.  Read this:\\n' +
-            'developers.google.com/blockly/hacking/closure');
+            'developers.google.com/blockly/guides/modify/web/closure');
     }
     dir = window.BLOCKLY_DIR.match(/[^\\/]+$/)[0];
   }
@@ -273,16 +263,11 @@ class Gen_compressed(threading.Thread):
   def do_compile(self, params, target_filename, filenames, remove):
     # Send the request to Google.
     headers = {"Content-type": "application/x-www-form-urlencoded"}
-
-    json_str=''
-    if proxy_url:
-      json_str=requests.post("http://closure-compiler.appspot.com/compile",data=params,headers=headers,proxies={"http":proxy_url,"https":proxy_url},timeout=100).content
-    else:
-      conn = httplib.HTTPConnection("closure-compiler.appspot.com")
-      conn.request("POST", "/compile", urllib.urlencode(params), headers)
-      response = conn.getresponse()
-      json_str = response.read()
-      conn.close()
+    conn = httplib.HTTPConnection("closure-compiler.appspot.com")
+    conn.request("POST", "/compile", urllib.urlencode(params), headers)
+    response = conn.getresponse()
+    json_str = response.read()
+    conn.close()
 
     # Parse the JSON response.
     json_data = json.loads(json_str)
@@ -467,7 +452,7 @@ if __name__ == "__main__":
            "Please rename this directory.")
     else:
       print("""Error: Closure not found.  Read this:
-https://developers.google.com/blockly/hacking/closure""")
+developers.google.com/blockly/guides/modify/web/closure""")
     sys.exit(1)
 
   search_paths = calcdeps.ExpandDirectories(

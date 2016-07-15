@@ -106,9 +106,9 @@ Blockly.clipboardSource_ = null;
 
 /**
  * Is the mouse dragging a block?
- * 0 - No drag operation.
- * 1 - Still inside the sticky DRAG_RADIUS.
- * 2 - Freely draggable.
+ * DRAG_NONE - No drag operation.
+ * DRAG_STICKY - Still inside the sticky DRAG_RADIUS.
+ * DRAG_FREE - Freely draggable.
  * @private
  */
 Blockly.dragMode_ = Blockly.DRAG_NONE;
@@ -141,36 +141,24 @@ Blockly.svgSize = function(svg) {
 };
 
 /**
- * Schedule a call to the resize handler.  Groups of simultaneous events (e.g.
- * a tree of blocks being deleted) are merged into one call.
- * @param {Blockly.WorkspaceSvg} workspace Any workspace in the SVG.
+ * Size the workspace when the contents change.  This also updates
+ * scrollbars accordingly.
+ * @param {!Blockly.WorkspaceSvg} workspace The workspace to resize.
  */
-Blockly.asyncSvgResize = function(workspace) {
-  if (Blockly.svgResizePending_) {
-    return;
-  }
-  if (!workspace) {
-    workspace = Blockly.getMainWorkspace();
-  }
-  Blockly.svgResizePending_ = true;
-  setTimeout(function() {Blockly.svgResize(workspace);}, 0);
+Blockly.resizeSvgContents = function(workspace) {
+  workspace.resizeContents();
 };
 
-/**
- * Flag indicating a resize event is scheduled.
- * Used to fire only one resize after multiple changes.
- * @type {boolean}
- * @private
- */
-Blockly.svgResizePending_ = false;
 
 /**
- * Size the SVG image to completely fill its container.
+ * Size the SVG image to completely fill its container. Call this when the view
+ * actually changes sizes (e.g. on a window resize/device orientation change).
+ * See Blockly.resizeSvgContents to resize the workspace when the contents
+ * change (e.g. when a block is added or removed).
  * Record the height/width of the SVG image.
  * @param {!Blockly.WorkspaceSvg} workspace Any workspace in the SVG.
  */
 Blockly.svgResize = function(workspace) {
-  Blockly.svgResizePending_ = false;
   var mainWorkspace = workspace;
   while (mainWorkspace.options.parentWorkspace) {
     mainWorkspace = mainWorkspace.options.parentWorkspace;
@@ -202,7 +190,7 @@ Blockly.svgResize = function(workspace) {
 Blockly.onMouseUp_ = function(e) {
   var workspace = Blockly.getMainWorkspace();
   Blockly.Css.setCursor(Blockly.Css.Cursor.OPEN);
-  workspace.isScrolling = false;
+  workspace.dragMode_ = Blockly.DRAG_NONE;
   // Unbind the touch event if it exists.
   if (Blockly.onTouchUpWrapper_) {
     Blockly.unbindEvent_(Blockly.onTouchUpWrapper_);
@@ -224,7 +212,7 @@ Blockly.onMouseMove_ = function(e) {
     return;  // Multi-touch gestures won't have e.clientX.
   }
   var workspace = Blockly.getMainWorkspace();
-  if (workspace.isScrolling) {
+  if (workspace.dragMode_ != Blockly.DRAG_NONE) {
     var dx = e.clientX - workspace.startDragMouseX;
     var dy = e.clientY - workspace.startDragMouseY;
     var metrics = workspace.startDragMetrics;
@@ -243,6 +231,7 @@ Blockly.onMouseMove_ = function(e) {
     // Cancel the long-press if the drag has moved too far.
     if (Math.sqrt(dx * dx + dy * dy) > Blockly.DRAG_RADIUS) {
       Blockly.longStop_();
+      workspace.dragMode_ = Blockly.DRAG_FREE;
     }
     e.stopPropagation();
     e.preventDefault();
@@ -289,7 +278,9 @@ Blockly.onKeyDown_ = function(e) {
     if (e.keyCode == 86) {
       // 'v' for paste.
       if (Blockly.clipboardXml_) {
+        Blockly.Events.setGroup(true);
         Blockly.clipboardSource_.paste(Blockly.clipboardXml_);
+        Blockly.Events.setGroup(false);
       }
     } else if (e.keyCode == 90) {
       // 'z' for undo 'Z' is for redo.
@@ -316,7 +307,7 @@ Blockly.onKeyDown_ = function(e) {
  * @private
  */
 Blockly.terminateDrag_ = function() {
-  Blockly.BlockSvg.terminateDrag_();
+  Blockly.BlockSvg.terminateDrag();
   Blockly.Flyout.terminateDrag_();
 };
 
@@ -340,9 +331,9 @@ Blockly.longPid_ = 0;
 Blockly.longStart_ = function(e, uiObject) {
   Blockly.longStop_();
   Blockly.longPid_ = setTimeout(function() {
-      e.button = 2;  // Simulate a right button click.
-      uiObject.onMouseDown_(e);
-    }, Blockly.LONGPRESS);
+    e.button = 2;  // Simulate a right button click.
+    uiObject.onMouseDown_(e);
+  }, Blockly.LONGPRESS);
 };
 
 /**
@@ -561,12 +552,21 @@ Blockly.addChangeListener = function(func) {
 
 /**
  * Returns the main workspace.  Returns the last used main workspace (based on
- * focus).
+ * focus).  Try not to use this function, particularly if there are multiple
+ * Blockly instances on a page.
  * @return {!Blockly.Workspace} The main workspace.
  */
 Blockly.getMainWorkspace = function() {
   return Blockly.mainWorkspace;
 };
+
+// IE9 does not have a console.  Create a stub to stop errors.
+if (!goog.global['console']) {
+  goog.global['console'] = {
+    'log': function() {},
+    'warn': function() {}
+  };
+}
 
 // Export symbols that would otherwise be renamed by Closure compiler.
 if (!goog.global['Blockly']) {

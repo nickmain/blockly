@@ -53,6 +53,12 @@ Blockly.COLLAPSE_CHARS = 30;
 Blockly.LONGPRESS = 750;
 
 /**
+ * Prevent a sound from playing if another sound preceded it within this many
+ * miliseconds.
+ */
+Blockly.SOUND_LIMIT = 100;
+
+/**
  * The richness of block colours, regardless of the hue.
  * Must be in the range of 0 (inclusive) to 1 (exclusive).
  */
@@ -148,7 +154,14 @@ Blockly.DRAG_NONE = 0;
 Blockly.DRAG_STICKY = 1;
 
 /**
- * ENUM for freely draggable.
+ * ENUM for inside the non-sticky DRAG_RADIUS, for differentiating between
+ * clicks and drags.
+ * @const
+ */
+Blockly.DRAG_BEGIN = 1;
+
+/**
+ * ENUM for freely draggable (outside the DRAG_RADIUS, if one applies).
  * @const
  */
 Blockly.DRAG_FREE = 2;

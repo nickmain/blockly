@@ -156,10 +156,6 @@ Blockly.Field.prototype.init = function() {
       Blockly.bindEvent_(this.fieldGroup_, 'mouseup', this, this.onMouseUp_);
   // Force a render.
   this.updateTextNode_();
-  if (Blockly.Events.isEnabled()) {
-    Blockly.Events.fire(new Blockly.Events.Change(
-        this.sourceBlock_, 'field', this.name, '', this.getValue()));
-  }
 };
 
 /**
@@ -230,6 +226,45 @@ Blockly.Field.prototype.setVisible = function(visible) {
  */
 Blockly.Field.prototype.setValidator = function(handler) {
   this.validator_ = handler;
+};
+
+/**
+ * Gets the validation function for editable fields.
+ * @return {Function} Validation function, or null.
+ */
+Blockly.Field.prototype.getValidator = function() {
+  return this.validator_;
+};
+
+/**
+ * Calls the validation function for this field, as well as all the validation
+ * function for the field's class and its parents.
+ * @param {string} text Proposed text.
+ * @return {?string} Revised text, or null if invalid.
+ */
+Blockly.Field.prototype.callValidator = function(text) {
+  // Collect a list of validators, from Field, through to the subclass, ending
+  // with the user's validator.
+  var validators = [this.getValidator()];
+  var fieldClass = this.constructor;
+  while (fieldClass) {
+    validators.unshift(fieldClass.classValidator);
+    fieldClass = fieldClass.superClass_;
+  }
+  // Call each validator in turn, allowing each to rewrite or reject.
+  for (var i = 0; i < validators.length; i++) {
+    var validator = validators[i];
+    if (validator) {
+      var result = validator.call(this, text);
+      if (result === null) {
+        // Validator rejects value.  Game over.
+        return null;
+      } else if (result !== undefined) {
+        text = result;
+      }
+    }
+  }
+  return text;
 };
 
 /**
@@ -429,7 +464,7 @@ Blockly.Field.prototype.onMouseUp_ = function(e) {
   } else if (Blockly.isRightButton(e)) {
     // Right-click.
     return;
-  } else if (Blockly.dragMode_ == Blockly.DRAG_FREE) {
+  } else if (this.sourceBlock_.workspace.isDragging()) {
     // Drag operation is concluding.  Don't open the editor.
     return;
   } else if (this.sourceBlock_.isEditable()) {
