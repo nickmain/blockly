@@ -40,12 +40,8 @@ blocklyApp.UtilsService = ng.core
       }
       return idMap;
     },
-    generateAriaLabelledByAttr: function(mainLabel, secondLabel, isDisabled) {
-      var attrValue = mainLabel + (secondLabel ? ' ' + secondLabel : '');
-      if (isDisabled) {
-        attrValue += ' blockly-disabled';
-      }
-      return attrValue;
+    generateAriaLabelledByAttr: function(mainLabel, secondLabel) {
+      return mainLabel + (secondLabel ? ' ' + secondLabel : '');
     },
     getInputTypeLabel: function(connection) {
       // Returns the input type name, or 'any' if any official input type
@@ -58,7 +54,7 @@ blocklyApp.UtilsService = ng.core
     },
     getBlockTypeLabel: function(inputBlock) {
       if (inputBlock.type == Blockly.NEXT_STATEMENT) {
-        return Blockly.Msg.STATEMENT;
+        return Blockly.Msg.BLOCK;
       } else {
         return Blockly.Msg.VALUE;
       }
@@ -70,5 +66,13 @@ blocklyApp.UtilsService = ng.core
     },
     isWorkspaceEmpty: function() {
       return !blocklyApp.workspace.topBlocks_.length;
+    },
+    getBlockById: function(blockId) {
+      return this.getBlockByIdFromWorkspace(blockId, blocklyApp.workspace);
+    },
+    getBlockByIdFromWorkspace: function(blockId, workspace) {
+      // This is used for non-default workspaces, such as those comprising the
+      // toolbox.
+      return workspace.getBlockById(blockId);
     }
   });

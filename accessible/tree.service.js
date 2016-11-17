@@ -27,27 +27,65 @@
 blocklyApp.TreeService = ng.core
   .Class({
     constructor: [
-        blocklyApp.NotificationsService, function(_notificationsService) {
+        blocklyApp.NotificationsService, blocklyApp.UtilsService,
+        blocklyApp.ClipboardService,
+        function(_notificationsService, _utilsService, _clipboardService) {
       // Stores active descendant ids for each tree in the page.
       this.activeDescendantIds_ = {};
       this.notificationsService = _notificationsService;
+      this.utilsService = _utilsService;
+      this.clipboardService = _clipboardService;
+      this.toolboxWorkspaces = {};
     }],
     getToolboxTreeNode_: function() {
       return document.getElementById('blockly-toolbox-tree');
-    },
-    getWorkspaceToolbarButtonNodes_: function() {
-      return Array.from(document.querySelectorAll(
-          'button.blocklyWorkspaceToolbarButton'));
     },
     // Returns a list of all top-level workspace tree nodes on the page.
     getWorkspaceTreeNodes_: function() {
       return Array.from(document.querySelectorAll('ol.blocklyWorkspaceTree'));
     },
+    getWorkspaceToolbarButtonNodes_: function() {
+      return Array.from(document.querySelectorAll(
+          'button.blocklyWorkspaceToolbarButton'));
+    },
+    getToolboxWorkspace: function(categoryNode) {
+      if (categoryNode.attributes && categoryNode.attributes.name) {
+        var categoryName = categoryNode.attributes.name.value;
+      } else {
+        var categoryName = 'no-category';
+      }
+
+      if (this.toolboxWorkspaces.hasOwnProperty(categoryName)) {
+        return this.toolboxWorkspaces[categoryName];
+      } else {
+        var categoryWorkspace = new Blockly.Workspace();
+        if (categoryName == 'no-category') {
+          for (var i = 0; i < categoryNode.length; i++) {
+            Blockly.Xml.domToBlock(categoryWorkspace, categoryNode[i]);
+          }
+        } else {
+          Blockly.Xml.domToWorkspace(categoryNode, categoryWorkspace);
+        }
+
+        this.toolboxWorkspaces[categoryName] = categoryWorkspace;
+        return this.toolboxWorkspaces[categoryName];
+      }
+    },
+    getToolboxBlockById: function(blockId) {
+      for (var categoryName in this.toolboxWorkspaces) {
+        var putativeBlock = this.utilsService.getBlockByIdFromWorkspace(
+            blockId, this.toolboxWorkspaces[categoryName]);
+        if (putativeBlock) {
+          return putativeBlock;
+        }
+      }
+      return null;
+    },
     // Returns a list of all top-level tree nodes on the page.
     getAllTreeNodes_: function() {
       var treeNodes = [this.getToolboxTreeNode_()];
-      treeNodes = treeNodes.concat(this.getWorkspaceToolbarButtonNodes_());
       treeNodes = treeNodes.concat(this.getWorkspaceTreeNodes_());
+      treeNodes = treeNodes.concat(this.getWorkspaceToolbarButtonNodes_());
       return treeNodes;
     },
     isTopLevelWorkspaceTree: function(treeId) {
@@ -239,6 +277,80 @@ blocklyApp.TreeService = ng.core
         }
       }
     },
+    isIsolatedTopLevelBlock_: function(block) {
+      // Returns whether the given block is at the top level, and has no
+      // siblings.
+      var blockIsAtTopLevel = !block.getParent();
+      var blockHasNoSiblings = (
+          (!block.nextConnection ||
+           !block.nextConnection.targetConnection) &&
+          (!block.previousConnection ||
+           !block.previousConnection.targetConnection));
+      return blockIsAtTopLevel && blockHasNoSiblings;
+    },
+    removeBlockAndSetFocus: function(block, blockRootNode, deleteBlockFunc) {
+      // This method runs the given deletion function and then does one of two
+      // things:
+      // - If the block is an isolated top-level block, it shifts the tree
+      //   focus.
+      // - Otherwise, it sets the correct new active desc for the current tree.
+      var treeId = this.getTreeIdForBlock(block.id);
+      if (this.isIsolatedTopLevelBlock_(block)) {
+        var nextNodeToFocusOn = this.getNodeToFocusOnWhenTreeIsDeleted(treeId);
+
+        this.clearActiveDesc(treeId);
+        deleteBlockFunc();
+        // Invoke a digest cycle, so that the DOM settles.
+        setTimeout(function() {
+          nextNodeToFocusOn.focus();
+        });
+      } else {
+        var nextActiveDesc = this.getNextActiveDescWhenBlockIsDeleted(
+            blockRootNode);
+        this.runWhilePreservingFocus(
+            deleteBlockFunc, treeId, nextActiveDesc.id);
+      }
+    },
+    cutBlock_: function(block, blockRootNode) {
+      var blockDescription = this.utilsService.getBlockDescription(block);
+
+      var that = this;
+      this.removeBlockAndSetFocus(block, blockRootNode, function() {
+        that.clipboardService.cut(block);
+      });
+
+      setTimeout(function() {
+        if (that.utilsService.isWorkspaceEmpty()) {
+          that.notificationsService.setStatusMessage(
+              blockDescription + ' cut. Workspace is empty.');
+        } else {
+          that.notificationsService.setStatusMessage(
+              blockDescription + ' cut. Now on workspace.');
+        }
+      });
+    },
+    copyBlock_: function(block) {
+      var blockDescription = this.utilsService.getBlockDescription(block);
+      this.clipboardService.copy(block);
+      this.notificationsService.setStatusMessage(
+          blockDescription + ' ' + Blockly.Msg.COPIED_BLOCK_MSG);
+    },
+    pasteToConnection: function(block, connection) {
+      if (this.clipboardService.isClipboardEmpty()) {
+        return;
+      }
+
+      var destinationTreeId = this.getTreeIdForBlock(
+          connection.getSourceBlock().id);
+      this.clearActiveDesc(destinationTreeId);
+
+      var newBlockId = this.clipboardService.pasteFromClipboard(connection);
+      // Invoke a digest cycle, so that the DOM settles.
+      var that = this;
+      setTimeout(function() {
+        that.focusOnBlock(newBlockId);
+      });
+    },
     onKeypress: function(e, tree) {
       var treeId = tree.id;
       var activeDesc = document.getElementById(this.getActiveDescId(treeId));
@@ -248,9 +360,61 @@ blocklyApp.TreeService = ng.core
         return;
       }
 
-      if (e.altKey || e.ctrlKey) {
+      if (e.altKey) {
         // Do not intercept combinations such as Alt+Home.
         return;
+      }
+
+      if (e.ctrlKey) {
+        var activeDesc = document.getElementById(this.getActiveDescId(treeId));
+
+        // Scout up the tree to see whether we're in the toolbox or workspace.
+        var scoutNode = activeDesc;
+        var TARGET_TAG_NAMES = ['BLOCKLY-TOOLBOX', 'BLOCKLY-WORKSPACE'];
+        while (TARGET_TAG_NAMES.indexOf(scoutNode.tagName) === -1) {
+          scoutNode = scoutNode.parentNode;
+        }
+        var inToolbox = (scoutNode.tagName == 'BLOCKLY-TOOLBOX');
+
+        // Disallow cutting and pasting in the toolbox.
+        if (inToolbox && e.keyCode != 67) {
+          if (e.keyCode == 86) {
+            this.notificationsService.setStatusMessage(
+                'Cannot paste block in toolbox.');
+          } else if (e.keyCode == 88) {
+            this.notificationsService.setStatusMessage(
+                'Cannot cut block in toolbox. Try copying instead.');
+          }
+        }
+
+        // Starting from the activeDesc, walk up the tree until we find the
+        // root of the current block.
+        var blockRootSuffix = inToolbox ? 'toolboxBlockRoot' : 'blockRoot';
+        var putativeBlockRootNode = activeDesc;
+        while (putativeBlockRootNode.id.indexOf(blockRootSuffix) === -1) {
+          putativeBlockRootNode = putativeBlockRootNode.parentNode;
+        }
+        var blockRootNode = putativeBlockRootNode;
+
+        var blockId = blockRootNode.id.substring(
+            0, blockRootNode.id.length - blockRootSuffix.length);
+        var block = inToolbox ?
+            this.getToolboxBlockById(blockId) :
+            this.utilsService.getBlockById(blockId);
+
+        if (e.keyCode == 88) {
+          // Cut block.
+          this.cutBlock_(block, blockRootNode);
+        } else if (e.keyCode == 67) {
+          // Copy block. Note that, in this case, we might be in the workspace
+          // or toolbox.
+          this.copyBlock_(block);
+        } else if (e.keyCode == 86) {
+          // Paste block, if possible.
+          var targetConnection =
+              e.shiftKey ? block.previousConnection : block.nextConnection;
+          this.pasteToConnection(block, targetConnection);
+        }
       } else if (document.activeElement.tagName == 'INPUT') {
         // For input fields, only Esc and Tab keystrokes are handled specially.
         if (e.keyCode == 27 || e.keyCode == 9) {
@@ -276,22 +440,26 @@ blocklyApp.TreeService = ng.core
         // Outside an input field, Enter, Tab and navigation keys are all
         // recognized.
         if (e.keyCode == 13) {
-          // Enter key. The user wants to interact with a button or an input
-          // field.
+          // Enter key. The user wants to interact with a button, interact with
+          // an input field, or move down one level.
           // Algorithm to find the field: do a DFS through the children until
           // we find an INPUT or BUTTON element (in which case we use it).
           // Truncate the search at child LI elements.
+          var found = false;
           var dfsStack = Array.from(activeDesc.children);
           while (dfsStack.length) {
             var currentNode = dfsStack.shift();
             if (currentNode.tagName == 'BUTTON') {
-              this.moveActiveDescToParent(treeId);
+              this.moveUpOneLevel_(treeId);
               currentNode.click();
+              found = true;
               break;
             } else if (currentNode.tagName == 'INPUT') {
               currentNode.focus();
+              currentNode.select();
               this.notificationsService.setStatusMessage(
                 'Type a value, then press Escape to exit');
+              found = true;
               break;
             } else if (currentNode.tagName == 'LI') {
               continue;
@@ -304,6 +472,12 @@ blocklyApp.TreeService = ng.core
               });
             }
           }
+
+          // If we cannot find a field to interact with, we try moving down a
+          // level instead.
+          if (!found) {
+            this.moveDownOneLevel_(treeId);
+          }
         } else if (e.keyCode == 9) {
           // Tab key. Note that allowing the event to propagate through is
           // intentional.
@@ -313,6 +487,8 @@ blocklyApp.TreeService = ng.core
           if (destinationTreeId) {
             this.notifyUserAboutCurrentTree_(destinationTreeId);
           }
+        } else if (e.keyCode == 27) {
+          this.moveUpOneLevel_(treeId);
         } else if (e.keyCode >= 35 && e.keyCode <= 40) {
           // End, home, and arrow keys.
           if (e.keyCode == 35) {
@@ -329,22 +505,22 @@ blocklyApp.TreeService = ng.core
             }
           } else if (e.keyCode == 37) {
             // Left arrow key. Go up a level, if possible.
-            this.moveActiveDescToParent(treeId);
+            this.moveUpOneLevel_(treeId);
           } else if (e.keyCode == 38) {
             // Up arrow key. Go to the previous sibling, if possible.
             var prevSibling = this.getPreviousSibling(activeDesc);
             if (prevSibling) {
               this.setActiveDesc(prevSibling.id, treeId);
             } else {
-              this.notificationsService.setStatusMessage(
-                  'Reached top of list');
+              var statusMessage = 'Reached top of list.';
+              if (this.getParentListElement_(activeDesc)) {
+                statusMessage += ' Press left to go to parent list.';
+              }
+              this.notificationsService.setStatusMessage(statusMessage);
             }
           } else if (e.keyCode == 39) {
             // Right arrow key. Go down a level, if possible.
-            var firstChild = this.getFirstChild(activeDesc);
-            if (firstChild) {
-              this.setActiveDesc(firstChild.id, treeId);
-            }
+            this.moveDownOneLevel_(treeId);
           } else if (e.keyCode == 40) {
             // Down arrow key. Go to the next sibling, if possible.
             var nextSibling = this.getNextSibling(activeDesc);
@@ -352,7 +528,7 @@ blocklyApp.TreeService = ng.core
               this.setActiveDesc(nextSibling.id, treeId);
             } else {
               this.notificationsService.setStatusMessage(
-                  'Reached bottom of list');
+                  'Reached bottom of list.');
             }
           }
 
@@ -361,18 +537,26 @@ blocklyApp.TreeService = ng.core
         }
       }
     },
-    moveActiveDescToParent: function(treeId) {
+    moveDownOneLevel_: function(treeId) {
       var activeDesc = document.getElementById(this.getActiveDescId(treeId));
-      var nextNode = activeDesc.parentNode;
-      if (this.isButtonOrFieldNode_(activeDesc)) {
-        nextNode = nextNode.parentNode;
+      var firstChild = this.getFirstChild(activeDesc);
+      if (firstChild) {
+        this.setActiveDesc(firstChild.id, treeId);
       }
-      while (nextNode && nextNode.tagName != 'LI') {
-        nextNode = nextNode.parentNode;
-      }
+    },
+    moveUpOneLevel_: function(treeId) {
+      var activeDesc = document.getElementById(this.getActiveDescId(treeId));
+      var nextNode = this.getParentListElement_(activeDesc);
       if (nextNode) {
         this.setActiveDesc(nextNode.id, treeId);
       }
+    },
+    getParentListElement_: function(element) {
+      var nextNode = element.parentNode;
+      while (nextNode && nextNode.tagName != 'LI') {
+        nextNode = nextNode.parentNode;
+      }
+      return nextNode;
     },
     getFirstChild: function(element) {
       if (!element) {

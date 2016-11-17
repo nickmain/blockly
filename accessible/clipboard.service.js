@@ -61,6 +61,9 @@ blocklyApp.ClipboardService = ng.core
         return this.markedConnection_.getSourceBlock();
       }
     },
+    isAnyConnectionMarked: function() {
+      return Boolean(this.markedConnection_);
+    },
     isMovableToMarkedConnection: function(block) {
       // It should not be possible to move any ancestor of the block containing
       // the marked spot to the marked spot.
@@ -106,9 +109,13 @@ blocklyApp.ClipboardService = ng.core
     },
     copy: function(block) {
       this.clipboardBlockXml_ = Blockly.Xml.blockToDom(block);
+      Blockly.Xml.deleteNext(this.clipboardBlockXml_);
       this.clipboardBlockPreviousConnection_ = block.previousConnection;
       this.clipboardBlockNextConnection_ = block.nextConnection;
       this.clipboardBlockOutputConnection_ = block.outputConnection;
+    },
+    isClipboardEmpty: function() {
+      return !this.clipboardBlockXml_;
     },
     pasteFromClipboard: function(inputConnection) {
       var connection = inputConnection;
