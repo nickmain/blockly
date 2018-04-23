@@ -104,7 +104,7 @@ goog.require('Blockly.Msg');
 /** @export */ Blockly.Msg.LISTS_GET_INDEX_LAST = "ostatni";
 /** @export */ Blockly.Msg.LISTS_GET_INDEX_RANDOM = "losowy";
 /** @export */ Blockly.Msg.LISTS_GET_INDEX_REMOVE = "usuń";
-/** @export */ Blockly.Msg.LISTS_GET_INDEX_TAIL = "";
+/** @export */ Blockly.Msg.LISTS_GET_INDEX_TAIL = "";  // untranslated
 /** @export */ Blockly.Msg.LISTS_GET_INDEX_TOOLTIP_GET_FIRST = "Zwraca pierwszy element z listy.";
 /** @export */ Blockly.Msg.LISTS_GET_INDEX_TOOLTIP_GET_FROM = "Zwraca element z konkretnej pozycji na liście.";
 /** @export */ Blockly.Msg.LISTS_GET_INDEX_TOOLTIP_GET_LAST = "Zwraca ostatni element z listy.";
@@ -281,8 +281,12 @@ goog.require('Blockly.Msg');
 /** @export */ Blockly.Msg.MATH_TRIG_TOOLTIP_COS = "Zwróć wartość cosinusa o stopniu (nie w radianach).";
 /** @export */ Blockly.Msg.MATH_TRIG_TOOLTIP_SIN = "Zwróć wartość sinusa o stopniu (nie w radianach).";
 /** @export */ Blockly.Msg.MATH_TRIG_TOOLTIP_TAN = "Zwróć tangens o stopniu (nie w radianach).";
+/** @export */ Blockly.Msg.NEW_COLOUR_VARIABLE = "Create colour variable...";  // untranslated
+/** @export */ Blockly.Msg.NEW_NUMBER_VARIABLE = "Create number variable...";  // untranslated
+/** @export */ Blockly.Msg.NEW_STRING_VARIABLE = "Create string variable...";  // untranslated
 /** @export */ Blockly.Msg.NEW_VARIABLE = "Utwórz zmienną...";
 /** @export */ Blockly.Msg.NEW_VARIABLE_TITLE = "Nowa nazwa zmiennej:";
+/** @export */ Blockly.Msg.NEW_VARIABLE_TYPE_TITLE = "New variable type:";  // untranslated
 /** @export */ Blockly.Msg.ORDINAL_NUMBER_SUFFIX = "";
 /** @export */ Blockly.Msg.PROCEDURES_ALLOW_STATEMENTS = "zezwól na czynności";
 /** @export */ Blockly.Msg.PROCEDURES_BEFORE_PARAMS = "z:";
@@ -423,3 +427,4 @@ goog.require('Blockly.Msg');
 /** @export */ Blockly.Msg.TEXTS_HUE = "160";
 /** @export */ Blockly.Msg.PROCEDURES_HUE = "290";
 /** @export */ Blockly.Msg.COLOUR_HUE = "20";
+/** @export */ Blockly.Msg.VARIABLES_DYNAMIC_HUE = "310";
