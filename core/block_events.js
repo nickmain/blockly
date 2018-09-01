@@ -37,7 +37,7 @@ goog.provide('Blockly.Events.Move');  // Deprecated.
 goog.require('Blockly.Events');
 goog.require('Blockly.Events.Abstract');
 
-goog.require('goog.array');
+goog.require('goog.dom');
 goog.require('goog.math.Coordinate');
 
 
@@ -145,7 +145,7 @@ Blockly.Events.Change.prototype.fromJson = function(json) {
 
 /**
  * Does this event record any change of state?
- * @return {boolean} True if something changed.
+ * @return {boolean} False if something changed.
  */
 Blockly.Events.Change.prototype.isNull = function() {
   return this.oldValue == this.newValue;
@@ -300,7 +300,7 @@ Blockly.Events.Delete = function(block) {
     return;  // Blank event to be populated by fromJson.
   }
   if (block.getParent()) {
-    throw 'Connected blocks cannot be deleted.';
+    throw Error('Connected blocks cannot be deleted.');
   }
   Blockly.Events.Delete.superClass_.constructor.call(this, block);
 
@@ -470,7 +470,7 @@ Blockly.Events.Move.prototype.currentLocation_ = function() {
 
 /**
  * Does this event record any change of state?
- * @return {boolean} True if something changed.
+ * @return {boolean} False if something changed.
  */
 Blockly.Events.Move.prototype.isNull = function() {
   return this.oldParentId == this.newParentId &&

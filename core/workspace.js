@@ -26,9 +26,9 @@
 
 goog.provide('Blockly.Workspace');
 
+goog.require('Blockly.utils');
 goog.require('Blockly.VariableMap');
-goog.require('goog.array');
-goog.require('goog.math');
+goog.require('Blockly.WorkspaceComment');
 
 
 /**
@@ -55,6 +55,16 @@ Blockly.Workspace = function(opt_options) {
    * @private
    */
   this.topBlocks_ = [];
+  /**
+   * @type {!Array.<!Blockly.WorkspaceComment>}
+   * @private
+   */
+  this.topComments_ = [];
+  /**
+   * @type {!Object}
+   * @private
+   */
+  this.commentDB_ = Object.create(null);
   /**
    * @type {!Array.<!Function>}
    * @private
@@ -105,6 +115,13 @@ Blockly.Workspace = function(opt_options) {
 Blockly.Workspace.prototype.rendered = false;
 
 /**
+ * Returns `true` if the workspace is currently in the process of a bulk clear.
+ * @type {boolean}
+ * @package
+ */
+Blockly.Workspace.prototype.isClearing = false;
+
+/**
  * Maximum number of undo events in stack. `0` turns off undo, `Infinity` sets it to unlimited.
  * @type {number}
  */
@@ -142,8 +159,8 @@ Blockly.Workspace.prototype.addTopBlock = function(block) {
  * @param {!Blockly.Block} block Block to remove.
  */
 Blockly.Workspace.prototype.removeTopBlock = function(block) {
-  if (!goog.array.remove(this.topBlocks_, block)) {
-    throw 'Block not present in workspace\'s list of top-most blocks.';
+  if (!Blockly.utils.arrayRemove(this.topBlocks_, block)) {
+    throw Error('Block not present in workspace\'s list of top-most blocks.');
   }
 };
 
@@ -157,7 +174,8 @@ Blockly.Workspace.prototype.getTopBlocks = function(ordered) {
   // Copy the topBlocks_ list.
   var blocks = [].concat(this.topBlocks_);
   if (ordered && blocks.length > 1) {
-    var offset = Math.sin(goog.math.toRadians(Blockly.Workspace.SCAN_ANGLE));
+    var offset =
+        Math.sin(Blockly.utils.toRadians(Blockly.Workspace.SCAN_ANGLE));
     if (this.RTL) {
       offset *= -1;
     }
@@ -171,34 +189,111 @@ Blockly.Workspace.prototype.getTopBlocks = function(ordered) {
 };
 
 /**
- * Find all blocks in workspace.  No particular order.
+ * Add a comment to the list of top comments.
+ * @param {!Blockly.WorkspaceComment} comment comment to add.
+ * @package
+ */
+Blockly.Workspace.prototype.addTopComment = function(comment) {
+  this.topComments_.push(comment);
+
+  // Note: If the comment database starts to hold block comments, this may need
+  // to move to a separate function.
+  if (this.commentDB_[comment.id]) {
+    console.warn('Overriding an existing comment on this workspace, with id "' +
+        comment.id + '"');
+  }
+  this.commentDB_[comment.id] = comment;
+};
+
+/**
+ * Remove a comment from the list of top comments.
+ * @param {!Blockly.WorkspaceComment} comment comment to remove.
+ * @package
+ */
+Blockly.Workspace.prototype.removeTopComment = function(comment) {
+  if (!Blockly.utils.arrayRemove(this.topComments_, comment)) {
+    throw Error('Comment not present in workspace\'s list of top-most ' +
+        'comments.');
+  }
+  // Note: If the comment database starts to hold block comments, this may need
+  // to move to a separate function.
+  delete this.commentDB_[comment.id];
+};
+
+/**
+ * Finds the top-level comments and returns them.  Comments are optionally sorted
+ * by position; top to bottom (with slight LTR or RTL bias).
+ * @param {boolean} ordered Sort the list if true.
+ * @return {!Array.<!Blockly.WorkspaceComment>} The top-level comment objects.
+ * @package
+ */
+Blockly.Workspace.prototype.getTopComments = function(ordered) {
+  // Copy the topComments_ list.
+  var comments = [].concat(this.topComments_);
+  if (ordered && comments.length > 1) {
+    var offset =
+        Math.sin(Blockly.utils.toRadians(Blockly.Workspace.SCAN_ANGLE));
+    if (this.RTL) {
+      offset *= -1;
+    }
+    comments.sort(function(a, b) {
+      var aXY = a.getRelativeToSurfaceXY();
+      var bXY = b.getRelativeToSurfaceXY();
+      return (aXY.y + offset * aXY.x) - (bXY.y + offset * bXY.x);
+    });
+  }
+  return comments;
+};
+
+/**
+ * Find all blocks in workspace.  Blocks are optionally sorted
+ * by position; top to bottom (with slight LTR or RTL bias).
+ * @param {boolean} ordered Sort the list if true.
  * @return {!Array.<!Blockly.Block>} Array of blocks.
  */
-Blockly.Workspace.prototype.getAllBlocks = function() {
-  var blocks = this.getTopBlocks(false);
-  for (var i = 0; i < blocks.length; i++) {
-    blocks.push.apply(blocks, blocks[i].getChildren());
+Blockly.Workspace.prototype.getAllBlocks = function(ordered) {
+  if (ordered) {
+    // Slow, but ordered.
+    var topBlocks = this.getTopBlocks(true);
+    var blocks = [];
+    for (var i = 0; i < topBlocks.length; i++) {
+      blocks.push.apply(blocks, topBlocks[i].getDescendants(true));
+    }
+  } else {
+    // Fast, but in no particular order.
+    var blocks = this.getTopBlocks(false);
+    for (var i = 0; i < blocks.length; i++) {
+      blocks.push.apply(blocks, blocks[i].getChildren(false));
+    }
   }
   return blocks;
 };
 
 /**
- * Dispose of all blocks in workspace.
+ * Dispose of all blocks and comments in workspace.
  */
 Blockly.Workspace.prototype.clear = function() {
-  var existingGroup = Blockly.Events.getGroup();
-  if (!existingGroup) {
-    Blockly.Events.setGroup(true);
-  }
-  while (this.topBlocks_.length) {
-    this.topBlocks_[0].dispose();
-  }
-  if (!existingGroup) {
-    Blockly.Events.setGroup(false);
-  }
-  this.variableMap_.clear();
-  if (this.potentialVariableMap_) {
-    this.potentialVariableMap_.clear();
+  this.isClearing = true;
+  try {
+    var existingGroup = Blockly.Events.getGroup();
+    if (!existingGroup) {
+      Blockly.Events.setGroup(true);
+    }
+    while (this.topBlocks_.length) {
+      this.topBlocks_[0].dispose();
+    }
+    while (this.topComments_.length) {
+      this.topComments_[this.topComments_.length - 1].dispose();
+    }
+    if (!existingGroup) {
+      Blockly.Events.setGroup(false);
+    }
+    this.variableMap_.clear();
+    if (this.potentialVariableMap_) {
+      this.potentialVariableMap_.clear();
+    }
+  } finally {
+    this.isClearing = false;
   }
 };
 
@@ -417,7 +512,7 @@ Blockly.Workspace.prototype.addChangeListener = function(func) {
  * @param {Function} func Function to stop calling.
  */
 Blockly.Workspace.prototype.removeChangeListener = function(func) {
-  goog.array.remove(this.listeners_, func);
+  Blockly.utils.arrayRemove(this.listeners_, func);
 };
 
 /**
@@ -444,6 +539,17 @@ Blockly.Workspace.prototype.fireChangeListener = function(event) {
  */
 Blockly.Workspace.prototype.getBlockById = function(id) {
   return this.blockDB_[id] || null;
+};
+
+/**
+ * Find the comment on this workspace with the specified ID.
+ * @param {string} id ID of comment to find.
+ * @return {Blockly.WorkspaceComment} The sought after comment or null if not
+ *     found.
+ * @package
+ */
+Blockly.Workspace.prototype.getCommentById = function(id) {
+  return this.commentDB_[id] || null;
 };
 
 /**

@@ -37,6 +37,8 @@ goog.require('Blockly.Field');
 goog.require('Blockly.Names');
 goog.require('Blockly.Workspace');
 
+goog.require('goog.dom');
+
 
 /**
  * Constant to separate procedure names from variables and generated functions
@@ -188,7 +190,7 @@ Blockly.Procedures.flyoutCategory = function(workspace) {
     block.setAttribute('type', 'procedures_defnoreturn');
     block.setAttribute('gap', 16);
     var nameField = goog.dom.createDom('field', null,
-        Blockly.Msg.PROCEDURES_DEFNORETURN_PROCEDURE);
+        Blockly.Msg['PROCEDURES_DEFNORETURN_PROCEDURE']);
     nameField.setAttribute('name', 'NAME');
     block.appendChild(nameField);
     xmlList.push(block);
@@ -201,7 +203,7 @@ Blockly.Procedures.flyoutCategory = function(workspace) {
     block.setAttribute('type', 'procedures_defreturn');
     block.setAttribute('gap', 16);
     var nameField = goog.dom.createDom('field', null,
-        Blockly.Msg.PROCEDURES_DEFRETURN_PROCEDURE);
+        Blockly.Msg['PROCEDURES_DEFRETURN_PROCEDURE']);
     nameField.setAttribute('name', 'NAME');
     block.appendChild(nameField);
     xmlList.push(block);

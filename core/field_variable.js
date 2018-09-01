@@ -28,10 +28,11 @@ goog.provide('Blockly.FieldVariable');
 
 goog.require('Blockly.FieldDropdown');
 goog.require('Blockly.Msg');
+goog.require('Blockly.utils');
 goog.require('Blockly.VariableModel');
 goog.require('Blockly.Variables');
-goog.require('goog.asserts');
-goog.require('goog.string');
+
+goog.require('goog.math.Size');
 
 
 /**
@@ -132,8 +133,9 @@ Blockly.FieldVariable.prototype.dispose = function() {
  * @param {!Blockly.Block} block The block containing this field.
  */
 Blockly.FieldVariable.prototype.setSourceBlock = function(block) {
-  goog.asserts.assert(!block.isShadow(),
-      'Variable fields are not allowed to exist on shadow blocks.');
+  if (block.isShadow()) {
+    throw Error('Variable fields are not allowed to exist on shadow blocks.');
+  }
   Blockly.FieldVariable.superClass_.setSourceBlock.call(this, block);
 };
 
@@ -314,11 +316,11 @@ Blockly.FieldVariable.dropdownCreate = function() {
     // Set the UUID as the internal representation of the variable.
     options[i] = [variableModelList[i].name, variableModelList[i].getId()];
   }
-  options.push([Blockly.Msg.RENAME_VARIABLE, Blockly.RENAME_VARIABLE_ID]);
-  if (Blockly.Msg.DELETE_VARIABLE) {
+  options.push([Blockly.Msg['RENAME_VARIABLE'], Blockly.RENAME_VARIABLE_ID]);
+  if (Blockly.Msg['DELETE_VARIABLE']) {
     options.push(
         [
-          Blockly.Msg.DELETE_VARIABLE.replace('%1', name),
+          Blockly.Msg['DELETE_VARIABLE'].replace('%1', name),
           Blockly.DELETE_VARIABLE_ID
         ]
     );
@@ -351,6 +353,16 @@ Blockly.FieldVariable.prototype.onItemSelected = function(menu, menuItem) {
     // TODO (#1529): Call any validation function, and allow it to override.
   }
   this.setValue(id);
+};
+
+/**
+ * Overrides referencesVariables(), indicating this field refers to a variable.
+ * @return {boolean} True.
+ * @package
+ * @override
+ */
+Blockly.FieldVariable.prototype.referencesVariables = function() {
+  return true;
 };
 
 Blockly.Field.register('field_variable', Blockly.FieldVariable);
