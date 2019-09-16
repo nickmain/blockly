@@ -26,7 +26,9 @@
 
 goog.provide('Blockly.Connection');
 
+goog.require('Blockly.Events');
 goog.require('Blockly.Events.BlockMove');
+goog.require('Blockly.Xml');
 
 
 /**
@@ -240,8 +242,6 @@ Blockly.Connection.prototype.dispose = function() {
   if (this.inDB_) {
     this.db_.removeConnection_(this);
   }
-  this.db_ = null;
-  this.dbOpposite_ = null;
 };
 
 /**
@@ -324,7 +324,7 @@ Blockly.Connection.prototype.checkConnection_ = function(target) {
       throw Error('Target connection is null.');
     case Blockly.Connection.REASON_CHECKS_FAILED:
       var msg = 'Connection checks failed. ';
-      msg += this + ' expected '  + this.check_ + ', found ' + target.check_;
+      msg += this + ' expected ' + this.check_ + ', found ' + target.check_;
       throw Error(msg);
     case Blockly.Connection.REASON_SHADOW_PARENT:
       throw Error('Connecting non-shadow to shadow block.');
@@ -335,45 +335,95 @@ Blockly.Connection.prototype.checkConnection_ = function(target) {
 
 /**
  * Check if the two connections can be dragged to connect to each other.
+ * This is used by the connection database when searching for the closest
+ * connection.
+ * @param {!Blockly.Connection} candidate A nearby connection to check, which
+ *     must be a previous connection.
+ * @return {boolean} True if the connection is allowed, false otherwise.
+ * @private
+ */
+Blockly.Connection.prototype.canConnectToPrevious_ = function(candidate) {
+  if (this.targetConnection) {
+    // This connection is already occupied.
+    // A next connection will never disconnect itself mid-drag.
+    return false;
+  }
+
+  // Don't let blocks try to connect to themselves or ones they nest.
+  if (Blockly.draggingConnections_.indexOf(candidate) != -1) {
+    return false;
+  }
+
+  if (!candidate.targetConnection) {
+    return true;
+  }
+
+  var targetBlock = candidate.targetBlock();
+  // If it is connected to a real block, game over.
+  if (!targetBlock.isInsertionMarker()) {
+    return false;
+  }
+  // If it's connected to an insertion marker but that insertion marker
+  // is the first block in a stack, it's still fine.  If that insertion
+  // marker is in the middle of a stack, it won't work.
+  return !targetBlock.getPreviousBlock();
+};
+
+/**
+ * Check if the two connections can be dragged to connect to each other.
  * @param {!Blockly.Connection} candidate A nearby connection to check.
  * @return {boolean} True if the connection is allowed, false otherwise.
  */
 Blockly.Connection.prototype.isConnectionAllowed = function(candidate) {
+  // Don't consider insertion markers.
+  if (candidate.sourceBlock_.isInsertionMarker()) {
+    return false;
+  }
   // Type checking.
   var canConnect = this.canConnectWithReason_(candidate);
   if (canConnect != Blockly.Connection.CAN_CONNECT) {
     return false;
   }
 
-  // Don't offer to connect an already connected left (male) value plug to
-  // an available right (female) value plug.  Don't offer to connect the
-  // bottom of a statement block to one that's already connected.
-  if (candidate.type == Blockly.OUTPUT_VALUE ||
-      candidate.type == Blockly.PREVIOUS_STATEMENT) {
-    if (candidate.isConnected() || this.isConnected()) {
-      return false;
+  switch (candidate.type) {
+    case Blockly.PREVIOUS_STATEMENT:
+      return this.canConnectToPrevious_(candidate);
+    case Blockly.OUTPUT_VALUE: {
+      // Don't offer to connect an already connected left (male) value plug to
+      // an available right (female) value plug.
+      if ((candidate.isConnected() &&
+          !candidate.targetBlock().isInsertionMarker()) ||
+          this.isConnected()) {
+        return false;
+      }
+      break;
     }
-  }
-
-  // Offering to connect the left (male) of a value block to an already
-  // connected value pair is ok, we'll splice it in.
-  // However, don't offer to splice into an immovable block.
-  if (candidate.type == Blockly.INPUT_VALUE && candidate.isConnected() &&
-      !candidate.targetBlock().isMovable() &&
-      !candidate.targetBlock().isShadow()) {
-    return false;
-  }
-
-  // Don't let a block with no next connection bump other blocks out of the
-  // stack.  But covering up a shadow block or stack of shadow blocks is fine.
-  // Similarly, replacing a terminal statement with another terminal statement
-  // is allowed.
-  if (this.type == Blockly.PREVIOUS_STATEMENT &&
-      candidate.isConnected() &&
-      !this.sourceBlock_.nextConnection &&
-      !candidate.targetBlock().isShadow() &&
-      candidate.targetBlock().nextConnection) {
-    return false;
+    case Blockly.INPUT_VALUE: {
+      // Offering to connect the left (male) of a value block to an already
+      // connected value pair is ok, we'll splice it in.
+      // However, don't offer to splice into an immovable block.
+      if (candidate.isConnected() &&
+          !candidate.targetBlock().isMovable() &&
+          !candidate.targetBlock().isShadow()) {
+        return false;
+      }
+      break;
+    }
+    case Blockly.NEXT_STATEMENT: {
+      // Don't let a block with no next connection bump other blocks out of the
+      // stack.  But covering up a shadow block or stack of shadow blocks is
+      // fine.  Similarly, replacing a terminal statement with another terminal
+      // statement is allowed.
+      if (candidate.isConnected() &&
+          !this.sourceBlock_.nextConnection &&
+          !candidate.targetBlock().isShadow() &&
+          candidate.targetBlock().nextConnection) {
+        return false;
+      }
+      break;
+    }
+    default:
+      throw Error('Unknown connection type in isConnectionAllowed');
   }
 
   // Don't let blocks try to connect to themselves or ones they nest.
@@ -394,6 +444,10 @@ Blockly.Connection.prototype.connect = function(otherConnection) {
     return;
   }
   this.checkConnection_(otherConnection);
+  var eventGroup = Blockly.Events.getGroup();
+  if (!eventGroup) {
+    Blockly.Events.setGroup(true);
+  }
   // Determine which block is superior (higher in the source stack).
   if (this.isSuperior()) {
     // Superior block.
@@ -401,6 +455,9 @@ Blockly.Connection.prototype.connect = function(otherConnection) {
   } else {
     // Inferior block.
     otherConnection.connect_(this);
+  }
+  if (!eventGroup) {
+    Blockly.Events.setGroup(false);
   }
 };
 
@@ -491,8 +548,16 @@ Blockly.Connection.prototype.disconnect = function() {
     childBlock = this.sourceBlock_;
     parentConnection = otherConnection;
   }
+
+  var eventGroup = Blockly.Events.getGroup();
+  if (!eventGroup) {
+    Blockly.Events.setGroup(true);
+  }
   this.disconnectInternal_(parentBlock, childBlock);
   parentConnection.respawnShadow_();
+  if (!eventGroup) {
+    Blockly.Events.setGroup(false);
+  }
 };
 
 /**
@@ -604,6 +669,16 @@ Blockly.Connection.prototype.setCheck = function(check) {
 };
 
 /**
+ * Get a connection's compatibility.
+ * @return {Array} List of compatible value types.
+ *     Null if all types are compatible.
+ * @public
+ */
+Blockly.Connection.prototype.getCheck = function() {
+  return this.check_;
+};
+
+/**
  * Change a connection's shadow block.
  * @param {Element} shadow DOM representation of a block or null.
  */
@@ -613,7 +688,7 @@ Blockly.Connection.prototype.setShadowDom = function(shadow) {
 
 /**
  * Return a connection's shadow block.
- * @return {Element} shadow DOM representation of a block or null.
+ * @return {Element} Shadow DOM representation of a block or null.
  */
 Blockly.Connection.prototype.getShadowDom = function() {
   return this.shadowDom_;
@@ -627,11 +702,11 @@ Blockly.Connection.prototype.getShadowDom = function() {
  * and always return an empty list (the default).
  * {@link Blockly.RenderedConnection} overrides this behavior with a list
  * computed from the rendered positioning.
- * @param {number} maxLimit The maximum radius to another connection.
+ * @param {number} _maxLimit The maximum radius to another connection.
  * @return {!Array.<!Blockly.Connection>} List of connections.
  * @private
  */
-Blockly.Connection.prototype.neighbours_ = function(/* maxLimit */) {
+Blockly.Connection.prototype.neighbours_ = function(_maxLimit) {
   return [];
 };
 

@@ -32,9 +32,9 @@ goog.provide('Blockly.Events.CommentMove');
 
 goog.require('Blockly.Events');
 goog.require('Blockly.Events.Abstract');
-
-goog.require('goog.dom');
-goog.require('goog.math.Coordinate');
+goog.require('Blockly.utils.Coordinate');
+goog.require('Blockly.utils.xml');
+goog.require('Blockly.Xml');
 
 
 /**
@@ -194,7 +194,7 @@ Blockly.Events.CommentCreate.prototype.type = Blockly.Events.COMMENT_CREATE;
  * Encode the event as JSON.
  * @return {!Object} JSON representation.
  */
-// TODO(#1266): "Full" and "minimal" serialization.
+// TODO (#1266): "Full" and "minimal" serialization.
 Blockly.Events.CommentCreate.prototype.toJson = function() {
   var json = Blockly.Events.CommentCreate.superClass_.toJson.call(this);
   json['xml'] = Blockly.Xml.domToText(this.xml);
@@ -207,7 +207,7 @@ Blockly.Events.CommentCreate.prototype.toJson = function() {
  */
 Blockly.Events.CommentCreate.prototype.fromJson = function(json) {
   Blockly.Events.CommentCreate.superClass_.fromJson.call(this, json);
-  this.xml = Blockly.Xml.textToDom('<xml>' + json['xml'] + '</xml>').firstChild;
+  this.xml = Blockly.Xml.textToDom(json['xml']);
 };
 
 /**
@@ -215,26 +215,28 @@ Blockly.Events.CommentCreate.prototype.fromJson = function(json) {
  * @param {boolean} forward True if run forward, false if run backward (undo).
  */
 Blockly.Events.CommentCreate.prototype.run = function(forward) {
-  Blockly.Events.CommentCreateDeleteHelper(forward);
+  Blockly.Events.CommentCreateDeleteHelper(this, forward);
 };
 
 /**
  * Helper function for Comment[Create|Delete]
+ * @param {!Blockly.Events.CommentCreate|!Blockly.Events.CommentDelete} event
+ *     The event to run.
  * @param {boolean} create if True then Create, if False then Delete
  */
-Blockly.Events.CommentCreateDeleteHelper = function(create) {
-  var workspace = this.getEventWorkspace_();
+Blockly.Events.CommentCreateDeleteHelper = function(event, create) {
+  var workspace = event.getEventWorkspace_();
   if (create) {
-    var xml = goog.dom.createDom('xml');
-    xml.appendChild(this.xml);
+    var xml = Blockly.utils.xml.createElement('xml');
+    xml.appendChild(event.xml);
     Blockly.Xml.domToWorkspace(xml, workspace);
   } else {
-    var comment = workspace.getCommentById(this.commentId);
+    var comment = workspace.getCommentById(event.commentId);
     if (comment) {
       comment.dispose(false, false);
     } else {
       // Only complain about root-level block.
-      console.warn("Can't uncreate non-existent comment: " + this.commentId);
+      console.warn("Can't uncreate non-existent comment: " + event.commentId);
     }
   }
 };
@@ -265,7 +267,7 @@ Blockly.Events.CommentDelete.prototype.type = Blockly.Events.COMMENT_DELETE;
  * Encode the event as JSON.
  * @return {!Object} JSON representation.
  */
-// TODO(#1266): "Full" and "minimal" serialization.
+// TODO (#1266): "Full" and "minimal" serialization.
 Blockly.Events.CommentDelete.prototype.toJson = function() {
   var json = Blockly.Events.CommentDelete.superClass_.toJson.call(this);
   return json;
@@ -284,7 +286,7 @@ Blockly.Events.CommentDelete.prototype.fromJson = function(json) {
  * @param {boolean} forward True if run forward, false if run backward (undo).
  */
 Blockly.Events.CommentDelete.prototype.run = function(forward) {
-  Blockly.Events.CommentCreateDeleteHelper(!forward);
+  Blockly.Events.CommentCreateDeleteHelper(this, !forward);
 };
 
 /**
@@ -303,19 +305,19 @@ Blockly.Events.CommentMove = function(comment) {
   /**
    * The comment that is being moved.  Will be cleared after recording the new
    * location.
-   * @type {?Blockly.WorkspaceComment}
+   * @type {Blockly.WorkspaceComment}
    */
   this.comment_ = comment;
 
   /**
    * The location before the move, in workspace coordinates.
-   * @type {!goog.math.Coordinate}
+   * @type {!Blockly.utils.Coordinate}
    */
   this.oldCoordinate_ = comment.getXY();
 
   /**
    * The location after the move, in workspace coordinates.
-   * @type {!goog.math.Coordinate}
+   * @type {!Blockly.utils.Coordinate}
    */
   this.newCoordinate_ = null;
 };
@@ -327,7 +329,7 @@ goog.inherits(Blockly.Events.CommentMove, Blockly.Events.CommentBase);
  */
 Blockly.Events.CommentMove.prototype.recordNew = function() {
   if (!this.comment_) {
-    throw new Error('Tried to record the new position of a comment on the ' +
+    throw Error('Tried to record the new position of a comment on the ' +
         'same event twice.');
   }
   this.newCoordinate_ = this.comment_.getXY();
@@ -343,7 +345,7 @@ Blockly.Events.CommentMove.prototype.type = Blockly.Events.COMMENT_MOVE;
 /**
  * Override the location before the move.  Use this if you don't create the
  * event until the end of the move, but you know the original location.
- * @param {!goog.math.Coordinate} xy The location before the move, in workspace
+ * @param {!Blockly.utils.Coordinate} xy The location before the move, in workspace
  *     coordinates.
  */
 Blockly.Events.CommentMove.prototype.setOldCoordinate = function(xy) {
@@ -354,7 +356,7 @@ Blockly.Events.CommentMove.prototype.setOldCoordinate = function(xy) {
  * Encode the event as JSON.
  * @return {!Object} JSON representation.
  */
-// TODO(#1266): "Full" and "minimal" serialization.
+// TODO (#1266): "Full" and "minimal" serialization.
 Blockly.Events.CommentMove.prototype.toJson = function() {
   var json = Blockly.Events.CommentMove.superClass_.toJson.call(this);
   if (this.newCoordinate_) {
@@ -374,7 +376,7 @@ Blockly.Events.CommentMove.prototype.fromJson = function(json) {
   if (json['newCoordinate']) {
     var xy = json['newCoordinate'].split(',');
     this.newCoordinate_ =
-        new goog.math.Coordinate(parseFloat(xy[0]), parseFloat(xy[1]));
+        new Blockly.utils.Coordinate(parseFloat(xy[0]), parseFloat(xy[1]));
   }
 };
 
@@ -383,7 +385,7 @@ Blockly.Events.CommentMove.prototype.fromJson = function(json) {
  * @return {boolean} False if something changed.
  */
 Blockly.Events.CommentMove.prototype.isNull = function() {
-  return goog.math.Coordinate.equals(this.oldCoordinate_, this.newCoordinate_);
+  return Blockly.utils.Coordinate.equals(this.oldCoordinate_, this.newCoordinate_);
 };
 
 /**

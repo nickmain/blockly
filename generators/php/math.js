@@ -188,7 +188,7 @@ Blockly.PHP['math_number_property'] = function(block) {
          '  return true;',
          '}']);
     code = functionName + '(' + number_to_check + ')';
-    return [code, Blockly.JavaScript.ORDER_FUNCTION_CALL];
+    return [code, Blockly.PHP.ORDER_FUNCTION_CALL];
   }
   switch (dropdown_property) {
     case 'EVEN':
@@ -371,4 +371,14 @@ Blockly.PHP['math_random_int'] = function(block) {
 Blockly.PHP['math_random_float'] = function(block) {
   // Random fraction between 0 and 1.
   return ['(float)rand()/(float)getrandmax()', Blockly.PHP.ORDER_FUNCTION_CALL];
+};
+
+Blockly.PHP['math_atan2'] = function(block) {
+  // Arctangent of point (X, Y) in degrees from -180 to 180.
+  var argument0 = Blockly.PHP.valueToCode(block, 'X',
+      Blockly.PHP.ORDER_COMMA) || '0';
+  var argument1 = Blockly.PHP.valueToCode(block, 'Y',
+      Blockly.PHP.ORDER_COMMA) || '0';
+  return ['atan2(' + argument1 + ', ' + argument0 + ') / pi() * 180',
+      Blockly.PHP.ORDER_DIVISION];
 };

@@ -95,7 +95,7 @@ Blockly.Input.prototype.appendField = function(field, opt_name) {
  */
 Blockly.Input.prototype.insertFieldAt = function(index, field, opt_name) {
   if (index < 0 || index > this.fieldRow.length) {
-    throw new Error('index ' + index + ' out of bounds.');
+    throw Error('index ' + index + ' out of bounds.');
   }
 
   // Empty string, Null or undefined generates no field, unless field is named.
@@ -163,9 +163,10 @@ Blockly.Input.prototype.isVisible = function() {
 
 /**
  * Sets whether this input is visible or not.
- * Used to collapse/uncollapse a block.
+ * Should only be used to collapse/uncollapse a block.
  * @param {boolean} visible True if visible.
  * @return {!Array.<!Blockly.Block>} List of blocks to render.
+ * @package
  */
 Blockly.Input.prototype.setVisible = function(visible) {
   var renderList = [];
