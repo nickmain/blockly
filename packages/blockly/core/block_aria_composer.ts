@@ -204,7 +204,11 @@ export function getInputLabels(
 ): string[] {
   return block.inputList
     .filter((input) => input.isVisible())
-    .map((input) => input.getLabel(verbosity));
+    .map((input) =>
+      input.getAriaLabelText() !== null
+        ? input.getAriaLabelText()!
+        : input.getLabel(verbosity),
+    );
 }
 
 /**

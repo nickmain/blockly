@@ -23,8 +23,16 @@ import type {Field} from '../field.js';
 import * as fieldRegistry from '../field_registry.js';
 import {RenderedConnection} from '../rendered_connection.js';
 import {Verbosity} from '../utils/aria.js';
+import * as parsing from '../utils/parsing.js';
 import {Align} from './align.js';
 import {inputTypes} from './input_types.js';
+
+/**
+ * Represents a string or a function that returns a string which can be used as a
+ * custom ARIA string to represent an Input, or null if the default fallback should
+ * be used. See setAriaLabelProvider for more context.
+ */
+export type AriaLabelProvider = ((input: Input) => string | null) | string;
 
 /** Class for an input with optional fields. */
 export class Input {
@@ -34,6 +42,9 @@ export class Input {
 
   /** Is the input visible? */
   private visible = true;
+
+  /** The AriaLabelProvider */
+  private ariaLabelProvider: AriaLabelProvider | null = null;
 
   public readonly type: inputTypes = inputTypes.CUSTOM;
 
@@ -270,6 +281,38 @@ export class Input {
   init() {
     for (const field of this.fieldRow) {
       field.init();
+    }
+  }
+
+  /**
+   * Sets a custom ARIA label provider for this input, or null if it should be reset
+   * to use the default method.
+   *
+   * Inputs do not compute ARIA contexts directly, so the set provider will be used
+   * in select cases when the Input needs to be represented (such as for parts of a
+   * block label or for connections). Note that overriding this provider will not
+   * recompute any already constructed ARIA labels, and it cannot be assumed that the
+   * provider will be called any particular number of times during label
+   * recomputation. As such, implementations should make sure to provide a
+   * deterministic and idempotent ARIA representation each time the provider is
+   * called for a given input. It's also fine to reuse providers across multiple
+   * Input implementations.
+   */
+  setAriaLabelProvider(provider: AriaLabelProvider | null) {
+    this.ariaLabelProvider = provider;
+  }
+
+  /**
+   * Returns the string from the custom ARIA label provider set, or null if the default label (from the field row) should
+   * be used. See setAriaLabelProvider for more context.
+   */
+  getAriaLabelText(): string | null {
+    if (!this.ariaLabelProvider) {
+      return null;
+    } else if (typeof this.ariaLabelProvider === 'string') {
+      return parsing.replaceMessageReferences(this.ariaLabelProvider);
+    } else {
+      return this.ariaLabelProvider(this);
     }
   }
 
