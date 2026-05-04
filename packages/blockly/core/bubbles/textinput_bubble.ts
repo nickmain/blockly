@@ -63,6 +63,9 @@ export class TextInputBubble extends Bubble {
   /** View responsible for supporting text editing. */
   private editor: CommentEditor;
 
+  private readonly textChangeListener = () => {
+    this.recomputeAriaContext();
+  };
   /**
    * @param workspace The workspace this bubble belongs to.
    * @param anchor The anchor location of the thing this bubble is attached to.
@@ -85,6 +88,7 @@ export class TextInputBubble extends Bubble {
     this.contentContainer.appendChild(this.editor.getDom());
     this.resizeGroup = this.createResizeHandle(this.svgRoot, workspace);
     this.setSize(this.DEFAULT_SIZE, true);
+    this.addTextChangeListener(this.textChangeListener);
   }
 
   /** @returns the text of this bubble. */
@@ -286,6 +290,14 @@ export class TextInputBubble extends Bubble {
    */
   performAction() {
     getFocusManager().focusNode(this.getEditor());
+  }
+
+  /**
+   * Dispose of this bubble.
+   */
+  dispose() {
+    super.dispose();
+    this.editor.removeTextChangeListener(this.textChangeListener);
   }
 }
 

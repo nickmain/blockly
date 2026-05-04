@@ -13,6 +13,7 @@ import {EventType} from '../events/type.js';
 import * as eventUtils from '../events/utils.js';
 import type {IHasBubble} from '../interfaces/i_has_bubble.js';
 import type {ISerializable} from '../interfaces/i_serializable.js';
+import {Msg} from '../msg.js';
 import * as renderManagement from '../render_management.js';
 import {Coordinate} from '../utils.js';
 import * as dom from '../utils/dom.js';
@@ -336,6 +337,9 @@ export class CommentIcon extends Icon implements IHasBubble, ISerializable {
         'comment',
       ),
     );
+    if (this.svgRoot) {
+      this.recomputeAriaContext();
+    }
   }
 
   /** See IHasBubble.getBubble. */
@@ -376,6 +380,9 @@ export class CommentIcon extends Icon implements IHasBubble, ISerializable {
     this.textInputBubble.addLocationChangeListener(() =>
       this.onBubbleLocationChange(),
     );
+    this.textInputBubble.setAriaLabelProvider(() =>
+      Msg['BUBBLE_LABEL_COMMENT'].replace('%1', this.getText()),
+    );
   }
 
   /** Hides any open bubbles owned by this comment. */
@@ -402,6 +409,19 @@ export class CommentIcon extends Icon implements IHasBubble, ISerializable {
    */
   private getBubbleOwnerRect(): Rect {
     return (this.sourceBlock as BlockSvg).getBoundingRectangleWithoutChildren();
+  }
+
+  /**
+   * Returns the ARIA label to use for this icon (defaults to null). Note that this
+   * method will only be called during initialization by default, so dynamic changes
+   * to the icon's ARIA label need to be applied by calling recomputeAriaContext.
+   *
+   * @returns The ARIA label to use for this icon, or null to use a default.
+   */
+  protected override getAriaLabel(): string | null {
+    return this.bubbleIsVisible()
+      ? Msg['ICON_LABEL_COMMENT_OPEN']
+      : Msg['ICON_LABEL_COMMENT_CLOSED'];
   }
 }
 
