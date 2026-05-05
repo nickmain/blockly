@@ -21,7 +21,26 @@ import {createKeyDownEvent} from './test_helpers/user_input.js';
 suite('Keyboard-driven movement', function () {
   setup(function () {
     sharedTestSetup.call(this);
-    const toolbox = document.getElementById('toolbox-simple');
+    const toolbox = {
+      // There are two kinds of toolboxes. The simpler one is a flyout toolbox.
+      kind: 'flyoutToolbox',
+      // The contents is the blocks and other items that exist in your toolbox.
+      contents: [
+        {
+          kind: 'block',
+          type: 'text_print',
+        },
+        {
+          kind: 'block',
+          type: 'logic_negate',
+        },
+        {
+          kind: 'block',
+          type: 'math_number',
+        },
+      ],
+    };
+
     this.workspace = Blockly.inject('blocklyDiv', {toolbox: toolbox});
     Blockly.common.defineBlocks(p5blocks);
     Blockly.KeyboardMover.mover.setMoveDistance(20);
@@ -70,6 +89,11 @@ suite('Keyboard-driven movement', function () {
 
   function endMove(workspace) {
     const event = createKeyDownEvent(Blockly.utils.KeyCodes.ENTER);
+    workspace.getInjectionDiv().dispatchEvent(event);
+  }
+
+  function focusToolbox(workspace) {
+    const event = createKeyDownEvent(Blockly.utils.KeyCodes.T);
     workspace.getInjectionDiv().dispatchEvent(event);
   }
 
@@ -552,6 +576,162 @@ suite('Keyboard-driven movement', function () {
         sinon.assert.calledOnce(beepSpy);
         beepSpy.restore();
         toastSpy.restore();
+      });
+
+      test('initially moves the block to the previously-focused statement connection', function () {
+        const ifBlock = this.workspace.newBlock('controls_if');
+        ifBlock.initSvg();
+        ifBlock.render();
+
+        const statementConnection = ifBlock.getInput('DO0').connection;
+        Blockly.getFocusManager().focusNode(statementConnection);
+        focusToolbox(this.workspace);
+        startMove(this.workspace);
+
+        const printBlock = Blockly.getFocusManager().getFocusedNode();
+        const candidate = printBlock.getDragStrategy().connectionCandidate;
+
+        assert.equal(candidate.local, printBlock.previousConnection);
+        assert.equal(candidate.neighbour, statementConnection);
+
+        cancelMove(this.workspace);
+      });
+
+      test("initially moves the block to the previously-focused block's previous connection", function () {
+        const ifBlock = this.workspace.newBlock('controls_if');
+        ifBlock.initSvg();
+        ifBlock.render();
+
+        Blockly.getFocusManager().focusNode(ifBlock);
+        focusToolbox(this.workspace);
+        startMove(this.workspace);
+
+        const printBlock = Blockly.getFocusManager().getFocusedNode();
+        const candidate = printBlock.getDragStrategy().connectionCandidate;
+
+        assert.equal(candidate.local, printBlock.nextConnection);
+        assert.equal(candidate.neighbour, ifBlock.previousConnection);
+
+        cancelMove(this.workspace);
+      });
+
+      test('initially moves the block to the previously-focused input connection', function () {
+        const ifBlock = this.workspace.newBlock('controls_if');
+        ifBlock.initSvg();
+        ifBlock.render();
+
+        const inputConnection = ifBlock.getInput('IF0').connection;
+        Blockly.getFocusManager().focusNode(inputConnection);
+        focusToolbox(this.workspace);
+        moveDown(this.workspace);
+        startMove(this.workspace);
+
+        const notBlock = Blockly.getFocusManager().getFocusedNode();
+        const candidate = notBlock.getDragStrategy().connectionCandidate;
+
+        assert.equal(candidate.local, notBlock.outputConnection);
+        assert.equal(candidate.neighbour, inputConnection);
+
+        cancelMove(this.workspace);
+      });
+
+      test('initially moves the block to the previously-focused not-first statement connection', function () {
+        const ifBlock = this.workspace.newBlock('controls_ifelse');
+        ifBlock.initSvg();
+        ifBlock.render();
+
+        const statementConnection = ifBlock.getInput('ELSE').connection;
+        Blockly.getFocusManager().focusNode(statementConnection);
+        focusToolbox(this.workspace);
+        startMove(this.workspace);
+
+        const printBlock = Blockly.getFocusManager().getFocusedNode();
+        const candidate = printBlock.getDragStrategy().connectionCandidate;
+
+        assert.equal(candidate.local, printBlock.previousConnection);
+        assert.equal(candidate.neighbour, statementConnection);
+
+        cancelMove(this.workspace);
+      });
+
+      test("initially moves the block to the previously-focused block's input connection", function () {
+        const ifBlock = this.workspace.newBlock('controls_if');
+        ifBlock.initSvg();
+        ifBlock.render();
+
+        Blockly.getFocusManager().focusNode(ifBlock);
+        focusToolbox(this.workspace);
+        moveDown(this.workspace);
+        startMove(this.workspace);
+
+        const notBlock = Blockly.getFocusManager().getFocusedNode();
+        const candidate = notBlock.getDragStrategy().connectionCandidate;
+
+        assert.equal(candidate.local, notBlock.outputConnection);
+        assert.equal(candidate.neighbour, ifBlock.getInput('IF0').connection);
+
+        cancelMove(this.workspace);
+      });
+
+      test('initially moves the block to the previously-focused not-first input connection', function () {
+        const compare = this.workspace.newBlock('logic_compare');
+        compare.initSvg();
+        compare.render();
+
+        Blockly.getFocusManager().focusNode(compare.getInput('B').connection);
+        focusToolbox(this.workspace);
+        moveDown(this.workspace);
+        startMove(this.workspace);
+
+        const notBlock = Blockly.getFocusManager().getFocusedNode();
+        const candidate = notBlock.getDragStrategy().connectionCandidate;
+
+        assert.equal(candidate.local, notBlock.outputConnection);
+        assert.equal(candidate.neighbour, compare.getInput('B').connection);
+
+        cancelMove(this.workspace);
+      });
+
+      test("initially moves the block to the previously-focused block's parent input connection", function () {
+        const compare = this.workspace.newBlock('logic_compare');
+        compare.initSvg();
+        compare.render();
+
+        const boolean = this.workspace.newBlock('logic_boolean');
+        boolean.initSvg();
+        boolean.render();
+        boolean.outputConnection.connect(compare.getInput('A').connection);
+
+        Blockly.getFocusManager().focusNode(boolean);
+        focusToolbox(this.workspace);
+        moveDown(this.workspace);
+        startMove(this.workspace);
+
+        const notBlock = Blockly.getFocusManager().getFocusedNode();
+        const candidate = notBlock.getDragStrategy().connectionCandidate;
+
+        assert.equal(candidate.local, notBlock.outputConnection);
+        assert.equal(candidate.neighbour, compare.getInput('A').connection);
+
+        cancelMove(this.workspace);
+      });
+
+      test('initially moves the block to the workspace when the previously-focused block has no compatible connections', function () {
+        const repeat = this.workspace.newBlock('controls_repeat');
+        repeat.initSvg();
+        repeat.render();
+
+        Blockly.getFocusManager().focusNode(repeat);
+        focusToolbox(this.workspace);
+        moveDown(this.workspace);
+        startMove(this.workspace);
+
+        const notBlock = Blockly.getFocusManager().getFocusedNode();
+        const candidate = notBlock.getDragStrategy().connectionCandidate;
+
+        assert.isNull(candidate);
+
+        cancelMove(this.workspace);
       });
 
       suite('Statement move tests', function () {
