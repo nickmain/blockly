@@ -368,5 +368,12 @@ suite('Inputs', function () {
       // AriaLabelProvider and without setting the provider (the default label)
       assert.equal(labelA, labelB);
     });
+    test('Field labels are comma separated', function () {
+      this.block.appendDummyInput().appendField('first').appendField('second');
+
+      const label = this.block.getAriaLabel();
+
+      assert.include(label, 'first, second');
+    });
   });
 });

@@ -413,7 +413,7 @@ export class Input {
         );
       }
     }
-    return labels.join(' ');
+    return labels.join(', ');
   }
 
   /**
