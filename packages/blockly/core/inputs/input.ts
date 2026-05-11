@@ -418,12 +418,17 @@ export class Input {
   }
 
   /**
-   * Returns the index of this input on its source block.
+   * Returns the index of this input, excluding inputs without connections, on its
+   * source block.
    *
    * @internal
    */
   getIndex(): number {
-    const inputs = this.getSourceBlock().inputList;
-    return inputs.indexOf(this);
+    const noConnectionInputTypes = [inputTypes.DUMMY, inputTypes.END_ROW];
+    const allInputs = this.getSourceBlock().inputList;
+    const allConnectionInputs = allInputs.filter(
+      (input) => !noConnectionInputTypes.includes(input.type),
+    );
+    return allConnectionInputs.indexOf(this);
   }
 }

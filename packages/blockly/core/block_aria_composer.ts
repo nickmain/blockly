@@ -123,6 +123,10 @@ export function configureAriaRole(block: BlockSvg) {
  * `lookback` attribute is specified, all of the fields on the row immediately
  * above the Input will be used instead.
  *
+ * Empty field labels are excluded because they don't provide useful context.
+ * Fields should generally have a helpful label, but there are exceptions, such
+ * as when empty label fields are used to control the layout of a block.
+ *
  * @internal
  * @param input The Input to compute a description/context label for.
  * @param lookback If true, will use labels for fields on the previous row if
@@ -146,7 +150,7 @@ export function computeFieldRowLabel(
       return computeFieldRowLabel(inputs[index - 1], lookback, verbosity);
     }
   }
-  return fieldRowLabel;
+  return fieldRowLabel.filter((label) => !!label);
 }
 
 /**
@@ -249,11 +253,7 @@ export function getInputLabels(
  * @param input The input that defines the end of the subset.
  * @returns A list of field/input labels for the given block.
  */
-export function getInputLabelsSubset(
-  block: BlockSvg,
-  input: Input,
-  verbosity = Verbosity.STANDARD,
-): string[] {
+function getInputLabelsSubset(block: BlockSvg, input: Input): string[] {
   const inputIndex = block.inputList.indexOf(input);
   if (inputIndex === -1) {
     throw new Error(
@@ -271,7 +271,7 @@ export function getInputLabelsSubset(
     .filter((input) => input.isVisible())
     .map(
       (input) =>
-        input.getLabel(verbosity) ||
+        input.getLabel(Verbosity.TERSE) ||
         Msg['INPUT_LABEL_INDEX'].replace(
           '%1',
           (input.getIndex() + 1).toString(),
@@ -404,11 +404,7 @@ function computeMoveConnectionLabel(
   // If the input doesn't have a custom ARIA label, compute one using the labels from
   // nearby fields.
   if (!inputLabel) {
-    const labels = getInputLabelsSubset(
-      conn.getSourceBlock(),
-      input,
-      Verbosity.TERSE,
-    );
+    const labels = getInputLabelsSubset(conn.getSourceBlock(), input);
     if (!labels.length) return baseLabel;
 
     inputLabel = labels.join(', ');

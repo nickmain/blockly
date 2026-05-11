@@ -1403,6 +1403,50 @@ suite('Keyboard-driven movement', function () {
 
         cancelMove(this.workspace);
       });
+      test('ignores dummy inputs when disambiguating', function () {
+        const subListBlock = this.workspace.newBlock('lists_getSublist');
+        subListBlock.initSvg();
+        subListBlock.render();
+        const mathBlock = this.workspace.newBlock('math_number');
+        mathBlock.initSvg();
+        mathBlock.render();
+
+        Blockly.getFocusManager().focusNode(mathBlock);
+        startMove(this.workspace);
+        this.clock.tick(10);
+        this.moveAndAssert(
+          moveRight,
+          ['Moving', 'to', 'list, get sub-list from', 'input 2'],
+          ['input 3'],
+        );
+        this.moveAndAssert(
+          moveRight,
+          ['Moving', 'to', 'list, get sub-list from', 'input 3'],
+          ['input 4'],
+        );
+
+        cancelMove(this.workspace);
+      });
+      test('ignores end row inputs when disambiguating', function () {
+        const compare = this.workspace.newBlock('logic_compare');
+        compare.appendDummyInput('END_ROW');
+        compare.moveInputBefore('END_ROW', 'A');
+        compare.initSvg();
+        compare.render();
+        const boolean = this.workspace.newBlock('logic_boolean');
+        boolean.initSvg();
+        boolean.render();
+
+        Blockly.getFocusManager().focusNode(boolean);
+        startMove(this.workspace);
+        this.clock.tick(10);
+        this.moveAndAssert(
+          moveRight,
+          ['Moving', 'to', 'input 1', '='],
+          [this.getBlockLabel(boolean)],
+        );
+        cancelMove(this.workspace);
+      });
     });
   });
 
