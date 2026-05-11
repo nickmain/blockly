@@ -209,6 +209,21 @@ export class FieldDropdown extends Field<string> {
   }
 
   /**
+   * This is hacky way of determining if a dropdown field is a full-block field or not.
+   * The constants that control the border rect are the same ones that determine how we
+   * render full-block dropdown fields. It's a full-block field if it doesn't have the
+   * border rect (and it's a simple reporter block).
+   *
+   * @returns true if this field should be treated as a full-block field
+   */
+  override isFullBlockField(): boolean {
+    return (
+      !this.shouldAddBorderRect_() &&
+      !!this.getSourceBlock()?.isSimpleReporter()
+    );
+  }
+
+  /**
    * Whether or not the dropdown should add a border rect.
    *
    * @returns True if the dropdown field should add a border rect.
