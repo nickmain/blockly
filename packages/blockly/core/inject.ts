@@ -13,6 +13,7 @@ import * as common from './common.js';
 import * as Css from './css.js';
 import * as dropDownDiv from './dropdowndiv.js';
 import {Grid} from './grid.js';
+import {keyboardNavigationController} from './keyboard_navigation_controller.js';
 import {Options} from './options.js';
 import {ScrollbarPair} from './scrollbar_pair.js';
 import * as Tooltip from './tooltip.js';
@@ -318,6 +319,11 @@ function bindDocumentEvents() {
     // should run regardless of what other touch event handlers have run.
     browserEvents.bind(document, 'touchend', null, Touch.longStop);
     browserEvents.bind(document, 'touchcancel', null, Touch.longStop);
+    browserEvents.bind(document, 'keydown', null, function (e: KeyboardEvent) {
+      if (e.key === 'Tab') {
+        keyboardNavigationController.setIsActive(true);
+      }
+    });
   }
   documentEventsBound = true;
 }

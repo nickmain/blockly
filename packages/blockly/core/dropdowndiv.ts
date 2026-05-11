@@ -51,6 +51,12 @@ export const PADDING_Y = 16;
 export const ANIMATION_TIME = 0.25;
 
 /**
+ * Class applied to the element that is displaying the DropDownDiv, used to
+ * apply focus styles.
+ */
+const SHOWING_DROPDOWNDIV_SELECTOR = 'blocklyShowingDropDownDiv';
+
+/**
  * Timer for animation out, to be cleared if we need to immediately hide
  * without disrupting new shows.
  */
@@ -411,6 +417,9 @@ export function show<T>(
     aria.State.OWNS,
     existingOwnership ? [existingOwnership, div.id] : div.id,
   );
+  mainWorkspace
+    .getFocusableElement()
+    .classList.add(SHOWING_DROPDOWNDIV_SELECTOR);
 
   // When we change `translate` multiple times in close succession,
   // Chrome may choose to wait and apply them all at once.
@@ -735,6 +744,9 @@ export function hideWithoutAnimation() {
     aria.State.OWNS,
     existingOwnership.replace(div.id, ''),
   );
+  workspace
+    .getFocusableElement()
+    .classList.remove(SHOWING_DROPDOWNDIV_SELECTOR);
 
   workspace.markFocused();
 
