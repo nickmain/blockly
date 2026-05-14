@@ -14,7 +14,12 @@ import * as contextmenu from './contextmenu.js';
 import * as dropDownDiv from './dropdowndiv.js';
 import * as eventUtils from './events/utils.js';
 import {getFocusManager} from './focus_manager.js';
-import {clearPasteHints, showCopiedHint, showCutHint} from './hints.js';
+import {
+  clearPasteHints,
+  showCopiedHint,
+  showCutHint,
+  showScreenreaderModeHint,
+} from './hints.js';
 import {hasContextMenu} from './interfaces/i_contextmenu.js';
 import {isCopyable as isICopyable} from './interfaces/i_copyable.js';
 import {isDeletable as isIDeletable} from './interfaces/i_deletable.js';
@@ -69,6 +74,7 @@ export enum names {
   DUPLICATE = 'duplicate',
   CLEANUP = 'cleanup',
   SHOW_TOOLTIP = 'show_tooltip',
+  TOGGLE_SCREENREADER = 'toggle_screenreader',
 }
 
 /**
@@ -625,7 +631,10 @@ export function registerArrowNavigation() {
         const node = workspace.RTL
           ? getFocusManager().getFocusedTree()?.getNavigator().getOutNode()
           : getFocusManager().getFocusedTree()?.getNavigator().getInNode();
-        if (!node) return false;
+        if (!node) {
+          workspace.getAudioManager().playErrorBeep();
+          return false;
+        }
         getFocusManager().focusNode(node);
         return true;
       },
@@ -647,7 +656,10 @@ export function registerArrowNavigation() {
         const node = workspace.RTL
           ? getFocusManager().getFocusedTree()?.getNavigator().getInNode()
           : getFocusManager().getFocusedTree()?.getNavigator().getOutNode();
-        if (!node) return false;
+        if (!node) {
+          workspace.getAudioManager().playErrorBeep();
+          return false;
+        }
         getFocusManager().focusNode(node);
         return true;
       },
@@ -663,14 +675,18 @@ export function registerArrowNavigation() {
         !workspace.isDragging() &&
         !dropDownDiv.isVisible() &&
         !widgetDiv.isVisible(),
-      callback: (_workspace, e) => {
+      callback: (workspace, e) => {
         e.preventDefault();
         keyboardNavigationController.setIsActive(true);
         const node = getFocusManager()
           .getFocusedTree()
           ?.getNavigator()
           .getNextNode();
-        if (!node) return false;
+        if (!node) {
+          workspace.getAudioManager().playErrorBeep();
+          return false;
+        }
+        workspace.getAudioManager().maybePlayScopeChangeAudioCue(node);
         getFocusManager().focusNode(node);
         return true;
       },
@@ -685,14 +701,18 @@ export function registerArrowNavigation() {
         !workspace.isDragging() &&
         !dropDownDiv.isVisible() &&
         !widgetDiv.isVisible(),
-      callback: (_workspace, e) => {
+      callback: (workspace, e) => {
         e.preventDefault();
         keyboardNavigationController.setIsActive(true);
         const node = getFocusManager()
           .getFocusedTree()
           ?.getNavigator()
           .getPreviousNode();
-        if (!node) return false;
+        if (!node) {
+          workspace.getAudioManager().playErrorBeep();
+          return false;
+        }
+        workspace.getAudioManager().maybePlayScopeChangeAudioCue(node);
         getFocusManager().focusNode(node);
         return true;
       },
@@ -1108,6 +1128,41 @@ export function registerShowTooltip() {
 }
 
 /**
+ * Registers keyboard shortcut to toggle on or off various behaviors that
+ * improve the experience for individuals using screenreaders.
+ */
+export function registerToggleScreenreaderMode() {
+  const shortcut = ShortcutRegistry.registry.createSerializedKey(KeyCodes.Z, [
+    KeyCodes.CTRL_CMD,
+    KeyCodes.ALT,
+  ]);
+
+  let enabled = false;
+
+  const toggleScreenreader: KeyboardShortcut = {
+    name: names.TOGGLE_SCREENREADER,
+    preconditionFn: () => true,
+    callback: (workspace) => {
+      enabled = !enabled;
+      keyboardNavigationController.setScopeChangeAudioCuesEnabled(enabled);
+      workspace.getNavigator().setNavigationLoops(!enabled);
+      workspace.getToolbox()?.getNavigator().setNavigationLoops(!enabled);
+      workspace
+        .getFlyout()
+        ?.getWorkspace()
+        .getNavigator()
+        .setNavigationLoops(!enabled);
+      showScreenreaderModeHint(workspace, enabled);
+      return true;
+    },
+    keyCodes: [shortcut],
+    allowCollision: true,
+    displayText: () => Msg['SHORTCUTS_TOGGLE_SCREENREADER_MODE'],
+  };
+  ShortcutRegistry.registry.register(toggleScreenreader);
+}
+
+/**
  * Registers all default keyboard shortcut item. This should be called once per
  * instance of KeyboardShortcutRegistry.
  *
@@ -1147,6 +1202,7 @@ export function registerKeyboardNavigationShortcuts() {
 export function registerScreenReaderShortcuts() {
   registerReadInformation();
   registerReadExtendedInformation();
+  registerToggleScreenreaderMode();
 }
 
 registerDefaultShortcuts();
