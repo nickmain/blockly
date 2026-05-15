@@ -1775,6 +1775,12 @@ Blockly.Msg.SHORTCUTS_NEXT_STACK = 'Next stack';
 /// shortcut display text for the previous stack shortcut, which navigates to the previous block stack.
 Blockly.Msg.SHORTCUTS_PREVIOUS_STACK = 'Previous stack';
 /** @type {string} */
+/// shortcut display text for the next heading shortcut, which moves focus to the next heading (label) in the flyout.
+Blockly.Msg.SHORTCUTS_NEXT_HEADING = 'Next heading';
+/** @type {string} */
+/// shortcut display text for the previous heading shortcut, which moves focus to the previous heading (label) in the flyout.
+Blockly.Msg.SHORTCUTS_PREVIOUS_HEADING = 'Previous heading';
+/** @type {string} */
 /// shortcut display text for the perform action shortcut, which triggers an action on the focused element.
 Blockly.Msg.SHORTCUTS_PERFORM_ACTION = 'Edit or confirm';
 /** @type {string} */
@@ -1849,6 +1855,9 @@ Blockly.Msg.KEYBOARD_NAV_BLOCK_NAVIGATION_HINT = 'Use %1 to navigate inside of b
 /** @type {string} */
 /// Message shown when a user presses Enter with the workspace focused.
 Blockly.Msg.KEYBOARD_NAV_WORKSPACE_NAVIGATION_HINT = 'Use the arrow keys to navigate.';
+/** @type {string} */
+/// Message shown when a user presses Enter with a flyout label (heading) focused.
+Blockly.Msg.KEYBOARD_NAV_FLYOUT_LABEL_HINT = 'Use the arrow keys to navigate to a block, or press %1 to go to the next heading.';
 /** @type {string} */
 /// Part of an accessibility label for a block that indicates it is the first
 /// block in the stack.
