@@ -37,6 +37,9 @@ const rules = {
   // Blockly uses objects as maps, but uses Object.create(null) to
   // instantiate them.
   'guard-for-in': ['off'],
+  // New rule added that we're breaking in many places.
+  // TODO: Fix and remove this.
+  'no-useless-assignment': ['off'],
 };
 
 /**
@@ -191,6 +194,7 @@ export default [
       'scripts/helpers.js',
       'tests/mocha/.mocharc.js',
       'tests/migration/validate-renamings.mjs',
+      'tests/scripts/magic_symlink.js',
     ],
     languageOptions: {
       globals: {
