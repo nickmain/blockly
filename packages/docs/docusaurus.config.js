@@ -35,21 +35,6 @@ const config = {
     locales: ['en'],
   },
 
-  plugins: [
-    [
-      '@docusaurus/plugin-client-redirects',
-      {
-        fromExtensions: ['md', 'mdx'],
-        createRedirects(existingPath) {
-          if (existingPath.startsWith('/reference/')) {
-            return [existingPath.replace('/reference/', '/reference/js/')];
-          }
-          return undefined;
-        },
-      },
-    ],
-  ],
-
   presets: [
     [
       'classic',

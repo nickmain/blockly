@@ -1,0 +1,10 @@
+# Cloudflare Pages Redirects
+# Syntax: source destination [status_code]
+# https://developers.cloudflare.com/pages/configuration/redirects/
+
+# Legacy /reference/js/* paths redirect to canonical /reference/* URLs
+/reference/js/*   /reference/:splat   302
+
+# Strip .md/.mdx extensions if someone lands on the raw filename
+/reference/*.md   /reference/:splat   302
+/reference/*.mdx  /reference/:splat   302
