@@ -126,6 +126,29 @@ suite('WorkspaceSvg', function () {
     assert.isNotNull(gesture);
   });
 
+  test('Announces a screenreader hint on first focus', function () {
+    document.getElementById('blocklyAriaAnnounce').textContent = '';
+    Blockly.WorkspaceSvg.everFocused = false;
+    Blockly.getFocusManager().focusNode(this.workspace);
+    this.clock.runAll();
+    assert.include(
+      document.getElementById('blocklyAriaAnnounce').textContent,
+      'Use the arrow keys to navigate',
+    );
+  });
+
+  test('Nested workspaces do not announce screenreader hints', function () {
+    document.getElementById('blocklyAriaAnnounce').textContent = '';
+    Blockly.getFocusManager().focusNode(
+      this.workspace.getFlyout().getWorkspace(),
+    );
+    this.clock.runAll();
+    assert.notInclude(
+      document.getElementById('blocklyAriaAnnounce').textContent,
+      'Use the arrow keys to navigate',
+    );
+  });
+
   suite('updateToolbox', function () {
     test('Passes in null when toolbox exists', function () {
       assert.throws(
