@@ -37,7 +37,6 @@
     "langfiles": "gulp langfiles",
     "minify": "gulp minify",
     "package": "gulp pack",
-    "postinstall": "patch-package",
     "prepareDemos": "gulp prepareDemos",
     "publish": "npm ci && gulp publish",
     "publish:beta": "npm ci && gulp publishBeta",
