@@ -396,6 +396,35 @@ suite('ARIA', function () {
       assert.isTrue(label.startsWith('Begin else'));
     });
 
+    test('Statement child includes labels from other inputs in the same statement section', function () {
+      Blockly.Blocks['aria_parent_label_test'] = {
+        init: function () {
+          this.appendValueInput('IF').appendField('if');
+          this.appendStatementInput('DO').appendField('do');
+          this.appendDummyInput('DUMMY').appendField("here's a label");
+          this.appendEndRowInput('END_ROW').appendField(
+            new Blockly.FieldImage(
+              'https://www.gstatic.com/codesite/ph/images/star_on.gif',
+              15,
+              15,
+              {alt: '*', flipRtl: false},
+            ),
+          );
+          this.appendStatementInput('BODY');
+          this.setPreviousStatement(true, null);
+          this.setNextStatement(true, null);
+        },
+      };
+      const block = this.makeBlock('aria_parent_label_test');
+      const printBlock = this.makeBlock('text_print');
+      block.getInput('BODY').connection.connect(printBlock.previousConnection);
+      const label = Blockly.utils.aria.getState(
+        printBlock.getFocusableElement(),
+        Blockly.utils.aria.State.LABEL,
+      );
+      assert.isTrue(label.startsWith("Begin here's a label, *"));
+    });
+
     test('A custom statement input label is wrapped in the "Begin" prefix', function () {
       const ifBlock = this.makeBlock('controls_ifelse');
       ifBlock.getInput('ELSE').setAriaLabelProvider('otherwise do');
@@ -560,6 +589,89 @@ suite('ARIA', function () {
       assert.isFalse(label.includes('else if, do'));
       assert.isFalse(label.includes('else,'));
       assert.isTrue(label.endsWith('has 4 branches'));
+    });
+  });
+
+  suite('getInputLabelsSubset', function () {
+    setup(function () {
+      Blockly.Blocks['aria_subset_test'] = {
+        init: function () {
+          this.appendValueInput('IF').appendField('if');
+          this.appendStatementInput('DO').appendField('do');
+          this.appendDummyInput('DUMMY').appendField("here's a label");
+          this.appendEndRowInput('END_ROW').appendField(
+            new Blockly.FieldImage(
+              'https://www.gstatic.com/codesite/ph/images/star_on.gif',
+              15,
+              15,
+              {alt: '*', flipRtl: false},
+            ),
+          );
+          this.appendStatementInput('BODY');
+          this.setPreviousStatement(true, null);
+          this.setNextStatement(true, null);
+        },
+      };
+      Blockly.Blocks['aria_subset_lone_statement'] = {
+        init: function () {
+          this.appendStatementInput('FIRST').appendField('first');
+          this.appendStatementInput('SECOND');
+          this.setPreviousStatement(true, null);
+          this.setNextStatement(true, null);
+        },
+      };
+      this.renderBlock = (blockType) => {
+        const block = this.workspace.newBlock(blockType);
+        block.initSvg();
+        block.render();
+        return block;
+      };
+    });
+
+    test('unlabeled statement input omits numbered fallback when section has other labels', function () {
+      const block = this.renderBlock('aria_subset_test');
+      const bodyInput = block.getInput('BODY');
+      const labels = getInputLabelsSubset(block, bodyInput);
+      assert.deepEqual(labels, ["here's a label", '*']);
+      for (const label of labels) {
+        assert.notInclude(label, 'input');
+      }
+    });
+
+    test('unlabeled statement input uses numbered fallback when section has no other labels', function () {
+      const block = this.renderBlock('aria_subset_lone_statement');
+      const secondInput = block.getInput('SECOND');
+      const labels = getInputLabelsSubset(block, secondInput);
+      assert.deepEqual(labels, [
+        Blockly.Msg.INPUT_LABEL_INDEX.replace('%1', '2'),
+      ]);
+    });
+
+    test('dummy inputs in a statement section do not produce input 0 fallback', function () {
+      Blockly.Blocks['makecode_if_else'] = {
+        init: function () {
+          this.appendValueInput('IF0').appendField('if');
+          this.appendDummyInput('THEN0').appendField('then');
+          this.appendStatementInput('DO0');
+          this.appendDummyInput('ELSETITLE').appendField('else');
+          this.appendDummyInput('ELSEBUTTONS').appendField(
+            new Blockly.FieldImage(
+              'https://www.gstatic.com/codesite/ph/images/star_on.gif',
+              24,
+              24,
+              {alt: '*', flipRtl: false},
+            ),
+          );
+          this.appendStatementInput('ELSE');
+          this.setPreviousStatement(true, null);
+          this.setNextStatement(true, null);
+        },
+      };
+      const block = this.renderBlock('makecode_if_else');
+      const elseInput = block.getInput('ELSE');
+      const labels = getInputLabelsSubset(block, elseInput);
+      assert.include(labels, 'else');
+      assert.notInclude(labels.join(', '), 'input 0');
     });
   });
 
