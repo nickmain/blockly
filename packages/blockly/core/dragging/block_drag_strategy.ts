@@ -1238,6 +1238,19 @@ export class BlockDragStrategy implements IDragStrategy {
       return this.pairToCandidate(parentPair);
     }
 
+    // Fall back to the nearest parent block that has a compatible connection.
+    // This handles the case where a nested value block (e.g. a number input)
+    // has passive focus but the dragged block is a statement block that should
+    // be inserted after the containing statement block.
+    let parentBlock = passiveBlock.getSurroundParent();
+    while (parentBlock) {
+      const pair = this.allConnectionPairs.find(
+        (pair) => pair.neighbour.getSourceBlock() === parentBlock,
+      );
+      if (pair) return this.pairToCandidate(pair);
+      parentBlock = parentBlock.getSurroundParent();
+    }
+
     return null;
   }
 
