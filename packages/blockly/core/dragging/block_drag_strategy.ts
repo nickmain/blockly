@@ -664,13 +664,20 @@ export class BlockDragStrategy implements IDragStrategy {
         const bounds = root?.getBoundingRectangle();
         if (!bounds) return;
 
+        const blockRects = draggingBlock.workspace
+          .getTopBlocks()
+          .map((block) => block.getBoundingRectangle());
+        const blocksLeft = Math.min(...blockRects.map((rect) => rect.left));
+
         let destination: Coordinate;
+        let blockBound: number;
         switch (direction) {
           case Direction.LEFT:
           case Direction.UP:
+            blockBound = Math.min(...blockRects.map((rect) => rect.top));
             destination = new Coordinate(
-              bounds.getOrigin().x,
-              bounds.getOrigin().y -
+              blocksLeft,
+              blockBound -
                 this.BLOCK_CONNECTION_OFFSET * 2 -
                 draggingBlock.getHeightWidth().height,
             );
@@ -678,11 +685,10 @@ export class BlockDragStrategy implements IDragStrategy {
           case Direction.RIGHT:
           case Direction.DOWN:
           default:
+            blockBound = Math.max(...blockRects.map((rect) => rect.bottom));
             destination = new Coordinate(
-              bounds.getOrigin().x,
-              bounds.getOrigin().y +
-                bounds.getHeight() +
-                this.BLOCK_CONNECTION_OFFSET * 2,
+              blocksLeft,
+              blockBound + this.BLOCK_CONNECTION_OFFSET * 2,
             );
             break;
         }
