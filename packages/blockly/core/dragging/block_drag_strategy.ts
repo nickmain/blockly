@@ -485,6 +485,8 @@ export class BlockDragStrategy implements IDragStrategy {
    * the initial connection pair is also used as the first connection candidate.
    */
   private storeInitialConnections(healStack: boolean) {
+    this.startParentConn = null;
+    this.startChildConn = null;
     // Prioritize the block's parent connection (output or previous) if one exists.
     let localParentConn: RenderedConnection | null = null;
     let parentTargetConn: RenderedConnection | null = null;
@@ -914,6 +916,10 @@ export class BlockDragStrategy implements IDragStrategy {
     }
 
     this.allConnectionPairs = [];
+    this.startParentConn = null;
+    this.startChildConn = null;
+    this.connectionCandidate = null;
+    this.dragging = false;
   }
 
   /** Disposes of any state at the end of the drag. */
