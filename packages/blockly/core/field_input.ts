@@ -601,6 +601,9 @@ export abstract class FieldInput<T extends InputTypes> extends Field<
     if (e.key === 'Enter') {
       WidgetDiv.hideIfOwner(this);
       dropDownDiv.hideWithoutAnimation();
+      // Prevent this from also being handled by the Enter keyboard shortcut,
+      // which can re-show the field editor after we just dismissed it.
+      e.stopPropagation();
     } else if (e.key === 'Escape') {
       this.setValue(
         this.htmlInput_!.getAttribute('data-untyped-default-value'),
