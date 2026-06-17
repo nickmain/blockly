@@ -379,19 +379,80 @@ suite('Inputs', function () {
 
       assert.include(label, 'first, 0');
     });
-    test('Adjacent labels for FieldLabels are combined into one field.', function () {
-      this.block
-        .appendDummyInput()
-        .appendField('first')
-        .appendField('second')
-        .appendField(new Blockly.FieldNumber(0))
-        .appendField('third')
-        .appendField('fourth')
-        .appendField('fifth');
+    suite(
+      'Adjacent labels for FieldLabels are combined into one field',
+      function () {
+        test('Value inputs are not combined', function () {
+          this.block.appendDummyInput().appendField('first');
+          this.block.appendValueInput('number').appendField('second');
+          this.block
+            .appendDummyInput()
+            .appendField('third')
+            .appendField('fourth');
 
-      const label = this.block.getAriaLabel();
+          const label = this.block.getAriaLabel();
 
-      assert.include(label, 'first second, 0, third fourth fifth');
-    });
+          assert.include(label, 'first second,');
+          assert.include(label, 'third fourth');
+        });
+        test('Statement inputs are not combined', function () {
+          const statementBlock = createRenderedBlock(
+            this.workspace,
+            'empty_block',
+          );
+          statementBlock.appendDummyInput().appendField('first');
+          statementBlock
+            .appendStatementInput('statement')
+            .appendField('second');
+          statementBlock
+            .appendDummyInput()
+            .appendField('third')
+            .appendField('fourth');
+          statementBlock.setPreviousStatement(true);
+          statementBlock.setNextStatement(true);
+
+          const label = statementBlock.getAriaLabel();
+
+          assert.include(label, 'first, second, third fourth');
+        });
+        test('Dummy inputs on the same row are combined', function () {
+          this.block.appendDummyInput().appendField('first');
+          this.block.appendDummyInput().appendField('second');
+          this.block
+            .appendDummyInput()
+            .appendField('third')
+            .appendField('fourth');
+          this.block.setInputsInline(true);
+
+          const label = this.block.getAriaLabel();
+
+          assert.include(label, 'first second third fourth');
+        });
+        test('Dummy inputs on different rows are not combined', function () {
+          this.block.appendDummyInput().appendField('first');
+          this.block.appendDummyInput().appendField('second');
+          this.block
+            .appendDummyInput()
+            .appendField('third')
+            .appendField('fourth');
+
+          const label = this.block.getAriaLabel();
+
+          assert.include(label, 'first, second, third fourth');
+        });
+        test('End row inputs are not combined', function () {
+          this.block.appendDummyInput().appendField('first');
+          this.block.appendEndRowInput('endRowInput').appendField('second');
+          this.block
+            .appendDummyInput()
+            .appendField('third')
+            .appendField('fourth');
+
+          const label = this.block.getAriaLabel();
+
+          assert.include(label, 'first second, third fourth');
+        });
+      },
+    );
   });
 });

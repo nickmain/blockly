@@ -318,8 +318,81 @@ export function getInputLabels(
       );
     }
   }
+  let adjacentFieldLabels: Array<string> = [];
+  return inputsToLabel.flatMap((input, index, inputs) => {
+    const inputLabel = input.getLabel(verbosity);
+    if (
+      index < inputs.length - 1 &&
+      endsWithFieldLabel(input) &&
+      beginsWithFieldLabel(inputs[index + 1]) &&
+      !isEndOfRow(input, inputs[index + 1])
+    ) {
+      // This input ends with a field label and the next one begins with one.
+      // They are also on the same visual row. We want to combine these, so we
+      // add this one to the list for later handling. Value inputs are
+      // excluded from this as the value should be separated.
+      adjacentFieldLabels.push(inputLabel);
+      return [];
+    } else if (beginsWithFieldLabel(input) && adjacentFieldLabels.length > 0) {
+      // There is at least one adjacent FieldLabel before this one but none
+      // after. Combine the FieldLabels into one string.
+      adjacentFieldLabels.push(inputLabel);
+      const label = adjacentFieldLabels.join(' ');
+      adjacentFieldLabels = [];
+      return label;
+    }
+    return inputLabel;
+  });
+}
 
-  return inputsToLabel.map((input) => input.getLabel(verbosity));
+/**
+ * Returns whether an input's list of visible fields begins with a FieldLabel
+ *
+ * @param input the input to be evaluated
+ * @returns a boolean indicating whether the input's first visible field is of
+ * type FieldLabel
+ */
+function beginsWithFieldLabel(input: Input): boolean {
+  const visibleFields = input.fieldRow.filter((field) => field.isVisible());
+  return visibleFields.length > 0 && visibleFields[0] instanceof FieldLabel;
+}
+
+/**
+ * Returns whether an input's list of visible fields ends with a FieldLabel
+ *
+ * @param input the input to be evaluated
+ * @returns a boolean indicating whether the input's last visible field is of
+ * type FieldLabel
+ */
+function endsWithFieldLabel(input: Input): boolean {
+  // Values and statements never have a label at the end of the input.
+  if (input.type === inputTypes.VALUE || input.type === inputTypes.STATEMENT) {
+    return false;
+  }
+  const visibleFields = input.fieldRow.filter((field) => field.isVisible());
+  return (
+    visibleFields.length > 0 &&
+    visibleFields[visibleFields.length - 1] instanceof FieldLabel
+  );
+}
+
+/**
+ * Returns whether the current input is the end of a visual "row"
+ *
+ * @param current the input of which to evaluate the end-of-row status
+ * @param next the next input on the block after "current"
+ * @returns a boolean representation of whether "current" is the end of a row
+ */
+function isEndOfRow(current: Input, next: Input): boolean {
+  const precedingStatementInput =
+    current.connection?.type === ConnectionType.NEXT_STATEMENT ||
+    current.type === inputTypes.END_ROW;
+
+  return (
+    !current.getSourceBlock().getInputsInline() ||
+    next.connection?.type === ConnectionType.NEXT_STATEMENT ||
+    precedingStatementInput
+  );
 }
 
 /**
