@@ -1931,7 +1931,7 @@ Blockly.Msg.WORKSPACE_LABEL_MUTATOR_WORKSPACE = 'Block editor workspace';
 /// Aria label for an always-open flyout's workspace. Since the flyout will have a role of list,
 /// the resulting screenreader output will be something like "Logic blocks list, with 5 items".
 /// Do not include the word "list" in this message.
-/// Parameters: %1 - the category of blocks in the flyout, e.g. "Logic" or "Math". This may be empty for an uncategorized flyout.
+/// \n\nParameters:\n* %1 - the category of blocks in the flyout, e.g. "Logic" or "Math". This may be empty for an uncategorized flyout.
 Blockly.Msg.WORKSPACE_LABEL_FLYOUT_WORKSPACE = '%1 blocks';
 /** @type {string} */
 /// ARIA live region message announcing the number of stacks of blocks in the workspace, optionally including comments.
