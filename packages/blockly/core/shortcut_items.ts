@@ -330,6 +330,7 @@ export function registerPaste() {
     },
     callback(workspace: WorkspaceSvg, e: Event) {
       const copyData = clipboard.getLastCopiedData();
+      const focusedNode = getFocusManager().getFocusedNode();
       if (!copyData) return false;
 
       const copyWorkspace = clipboard.getLastCopiedWorkspace();
@@ -355,6 +356,17 @@ export function registerPaste() {
         return !!clipboard.paste(copyData, targetWorkspace, mouseCoords);
       }
 
+      // If the focused node is a block, or part of a block (connection, field, etc.),
+      // paste relative to that block's position.
+      const block = targetWorkspace
+        .getNavigator()
+        .getSourceBlockFromNode(focusedNode);
+      const pasteOrigin = block?.getRelativeToSurfaceXY();
+      if (pasteOrigin) {
+        return !!clipboard.paste(copyData, targetWorkspace, pasteOrigin);
+      }
+
+      // No spatial focus target (e.g. workspace root) — use copy-location behavior.
       const copyCoords = clipboard.getLastCopiedLocation();
       if (!copyCoords) {
         // If we don't have location data about the original copyable, let the
