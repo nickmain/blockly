@@ -15,6 +15,7 @@ import {computeAriaLabel, getBeginStackLabel} from './block_aria_composer.js';
 import {BlockSvg} from './block_svg.js';
 import * as browserEvents from './browser_events.js';
 import * as bumpObjects from './bump_objects.js';
+import * as css from './css.js';
 import * as dialog from './dialog.js';
 import * as dropDownDiv from './dropdowndiv.js';
 import {EventType} from './events/type.js';
@@ -33,6 +34,7 @@ import * as aria from './utils/aria.js';
 import {Verbosity} from './utils/aria.js';
 import * as dom from './utils/dom.js';
 import {Size} from './utils/size.js';
+import {Svg} from './utils/svg.js';
 import * as userAgent from './utils/useragent.js';
 import * as WidgetDiv from './widgetdiv.js';
 import type {WorkspaceSvg} from './workspace_svg.js';
@@ -77,6 +79,11 @@ export abstract class FieldInput<T extends InputTypes> extends Field<
    * True if the value currently displayed in the field's editory UI is valid.
    */
   protected isTextValid_ = false;
+
+  /**
+   * The warning icon to display on invalid input
+   */
+  protected warningIcon: SVGElement | null = null;
 
   /**
    * The intial value of the field when the user opened an editor to change its
@@ -193,6 +200,54 @@ export abstract class FieldInput<T extends InputTypes> extends Field<
     this.fullBlockClickTarget_ =
       !!this.getConstants()?.FULL_BLOCK_FIELDS && block.isSimpleReporter();
     return this.fullBlockClickTarget_;
+  }
+
+  /** Creates the DOM elements for the invalid input warning icon. */
+  protected createWarningIcon(): SVGElement | null {
+    const sourceBlock = this.sourceBlock_ as BlockSvg;
+    if (!sourceBlock) {
+      return null;
+    }
+    const bBox = this.getScaledBBox();
+    const bBoxHeight = bBox.bottom - bBox.top;
+
+    const e = dom.createSvgElement(Svg.SVG, {
+      'class': 'blocklyInputWarning',
+      'viewBox': '-4 0 24 16',
+      'x': '0',
+      'y': '0',
+      'height': `${bBoxHeight}px`,
+      'width': `${bBoxHeight}px`,
+    });
+    dom.createSvgElement(
+      Svg.PATH,
+      {
+        'class': 'blocklyInputWarningIconShape',
+        'd': 'M2,15Q-1,15 0.5,12L6.5,1.7Q8,-1 9.5,1.7L15.5,12Q17,15 14,15z',
+      },
+      e,
+    );
+    dom.createSvgElement(
+      Svg.PATH,
+      {
+        'class': 'blocklyInputWarningIconSymbol',
+        'd': 'm7,4.8v3.16l0.27,2.27h1.46l0.27,-2.27v-3.16z',
+      },
+      e,
+    );
+    dom.createSvgElement(
+      Svg.RECT,
+      {
+        'class': 'blocklyInputWarningIconSymbol',
+        'x': '7',
+        'y': '11',
+        'height': '2',
+        'width': '2',
+      },
+      e,
+    );
+
+    return e;
   }
 
   /**
@@ -312,10 +367,14 @@ export abstract class FieldInput<T extends InputTypes> extends Field<
    */
   protected override render_() {
     super.render_();
+    const block = this.getSourceBlock() as BlockSvg | null;
+    if (!block) throw new UnattachedFieldError();
+
     // This logic is done in render_ rather than doValueInvalid_ or
     // doValueUpdate_ so that the code is more centralized.
     if (this.isBeingEdited_) {
       const htmlInput = this.htmlInput_ as HTMLElement;
+      this.renderWarningIcon(block.RTL, this.isTextValid_);
       if (!this.isTextValid_) {
         dom.addClass(htmlInput, 'blocklyInvalidInput');
         aria.setState(htmlInput, aria.State.INVALID, true);
@@ -325,8 +384,6 @@ export abstract class FieldInput<T extends InputTypes> extends Field<
       }
     }
 
-    const block = this.getSourceBlock() as BlockSvg | null;
-    if (!block) throw new UnattachedFieldError();
     // In general, do *not* let fields control the color of blocks. Having the
     // field control the color is unexpected, and could have performance
     // impacts.
@@ -335,6 +392,44 @@ export abstract class FieldInput<T extends InputTypes> extends Field<
     if (this.getConstants()!.FULL_BLOCK_FIELDS) block.applyColour();
   }
 
+  protected renderWarningIcon(rtl: boolean, isValid: boolean) {
+    const htmlInput = this.htmlInput_ as HTMLElement;
+
+    if (this.warningIcon) {
+      if (isValid) {
+        htmlInput.style.paddingRight = '';
+        htmlInput.style.paddingLeft = '';
+        dom.removeClass(this.warningIcon, 'blocklyInputWarningInvalid');
+      } else {
+        const bBox = this.getScaledBBox();
+        const bBoxHeight = bBox.bottom - bBox.top;
+        const hasBorder = !!this.borderRect_;
+        const xPadding = hasBorder
+          ? this.getConstants()!.FIELD_BORDER_RECT_X_PADDING
+          : bBoxHeight / 2;
+        dom.addClass(this.warningIcon, 'blocklyInputWarningInvalid');
+        const iconWidth = this.warningIcon.getBoundingClientRect().width;
+        htmlInput.setAttribute(
+          'width',
+          `${htmlInput.offsetWidth + iconWidth}px`,
+        );
+        // If we pad by the whole icon width, it looks too far from the
+        // text, and half the width looks too close.
+        const iconPadding = iconWidth / 1.5;
+        if (rtl) {
+          htmlInput.style.paddingRight = `${iconPadding}px`;
+        } else {
+          htmlInput.style.paddingLeft = `${iconPadding}px`;
+        }
+        this.size_.width = iconWidth;
+        const iconOffset = hasBorder
+          ? this.getConstants()!.FIELD_TEXT_HEIGHT -
+            this.getConstants()!.FIELD_BORDER_RECT_X_PADDING
+          : 0;
+        this.updateSize_(xPadding + iconOffset);
+      }
+    }
+  }
   /**
    * Set whether this field is spellchecked by the browser.
    *
@@ -462,6 +557,8 @@ export abstract class FieldInput<T extends InputTypes> extends Field<
       'spellcheck',
       this.spellcheck_ as AnyDuringMigration,
     );
+    this.warningIcon = this.createWarningIcon();
+
     const scale = this.workspace_!.getAbsoluteScale();
     const fontSize = this.getConstants()!.FIELD_TEXT_FONTSIZE * scale + 'pt';
     div!.style.fontSize = fontSize;
@@ -484,9 +581,15 @@ export abstract class FieldInput<T extends InputTypes> extends Field<
         div!.style.boxShadow =
           'rgba(255, 255, 255, 0.3) 0 0 0 ' + 4 * scale + 'px';
       }
+      // Adjust invalid input warning icon for full block style
+      const paddingX = (bBox.bottom - bBox.top) / 4;
+      this.warningIcon!.style.paddingLeft = `${paddingX}px`;
+      this.warningIcon!.style.paddingRight = `${paddingX}px`;
     }
     htmlInput.style.borderRadius = borderRadius;
-
+    if (this.warningIcon) {
+      div!.appendChild(this.warningIcon);
+    }
     div!.appendChild(htmlInput);
 
     htmlInput.value = htmlInput.defaultValue = this.getEditorText_(this.value_);
@@ -921,3 +1024,21 @@ export interface FieldInputConfig extends FieldConfig {
 export type FieldInputValidator<T extends InputTypes> = FieldValidator<
   string | T
 >;
+
+css.register(`
+  .blocklyInputWarningIconShape {
+    stroke: #1f1f1f;
+    stroke-width: 1px;
+    fill: none;
+  }
+  .blocklyInputWarningIconSymbol {
+    fill: #1f1f1f;
+  }
+  .blocklyInputWarning {
+    display: none;
+    position: absolute;
+  }
+  .blocklyInputWarning.blocklyInputWarningInvalid {
+    display: inline;
+  }
+`);

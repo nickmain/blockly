@@ -224,6 +224,7 @@ suite('Text Input Fields', function () {
             FIELD_TEXT_FONTFAMILY: 'sans-serif',
           };
           field.clickTarget_ = document.createElement('div');
+          field.createWarningIcon = () => {};
           Blockly.common.setMainWorkspace(workspace);
           Blockly.WidgetDiv.createDom();
           this.stub = sinon.stub(field, 'resizeEditor_');
@@ -510,6 +511,29 @@ suite('Text Input Fields', function () {
           rightField.getFocusableElement(),
         );
       });
+      test('Invalid input displays warning icon', async function () {
+        const validator = function () {
+          return null;
+        };
+        const block = this.workspace.getBlockById('left_input_block');
+        const field = this.getFieldFromShadowBlock(block);
+        field.setValidator(validator);
+        const stub = sinon.stub(field, 'resizeEditor_');
+
+        Blockly.getFocusManager().focusNode(field);
+        field.showEditor();
+        // This must be called to avoid editor resize logic throwing an error.
+        await Blockly.renderManagement.finishQueuedRenders();
+
+        // Change the value of the field's input through its editor.
+        const fieldEditor = document.querySelector('.blocklyHtmlInput');
+        this.simulateTypingIntoInput(fieldEditor, 'a');
+
+        // Move forward a few ticks to give the render_() a chance to run
+        this.clock.tick(16);
+        const warningIconDisplay = field.warningIcon.checkVisibility();
+        assert.isTrue(warningIconDisplay);
+      });
     });
 
     // The block being tested uses full-block fields in Zelos.
@@ -644,6 +668,28 @@ suite('Text Input Fields', function () {
       this.field.setValue('new value');
       const updatedLabel = this.focusableElement.getAttribute('aria-label');
       assert.isTrue(updatedLabel.includes('new value'));
+    });
+    test('Invalid input has ARIA invalid state', async function () {
+      const validator = function () {
+        return null;
+      };
+      this.field.setValidator(validator);
+      const stub = sinon.stub(this.field, 'resizeEditor_');
+
+      Blockly.getFocusManager().focusNode(this.field);
+      this.field.showEditor();
+      // This must be called to avoid editor resize logic throwing an error.
+      await Blockly.renderManagement.finishQueuedRenders();
+
+      // Change the value of the field's input through its editor.
+      const fieldEditor = document.querySelector('.blocklyHtmlInput');
+      fieldEditor.value = 'a';
+      fieldEditor.dispatchEvent(new InputEvent('input'));
+
+      // Move forward a few ticks to give the render_() a chance to run
+      this.clock.tick(16);
+      const ariaInvalid = fieldEditor.getAttribute('aria-invalid');
+      assert.equal(ariaInvalid, 'true');
     });
   });
 });

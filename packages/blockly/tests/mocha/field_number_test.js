@@ -569,6 +569,30 @@ suite('Number Fields', function () {
       assert.notInclude(label, 'dog');
       assert.include(label, '5');
     });
+    test('Invalid input has ARIA invalid state', function () {
+      this.field.setValue(5);
+      this.field.showEditor();
+
+      this.field.htmlInput_.value = 'a';
+      this.field.onHtmlInputChange(null);
+
+      // Move forward a few ticks to give the render_() a chance to run
+      this.clock.tick(16);
+      const ariaInvalid = this.field.htmlInput_.getAttribute('aria-invalid');
+      assert.equal(ariaInvalid, 'true');
+    });
+    test('Invalid input displays warning icon', function () {
+      this.field.setValue(5);
+      this.field.showEditor();
+
+      this.field.htmlInput_.value = 'a';
+      this.field.onHtmlInputChange(null);
+
+      // Move forward a few ticks to give the render_() a chance to run
+      this.clock.tick(16);
+      const warningIconDisplay = this.field.warningIcon.checkVisibility();
+      assert.isTrue(warningIconDisplay);
+    });
     suite('Full block fields', function () {
       setup(function () {
         this.workspace = Blockly.inject('blocklyDiv', {
