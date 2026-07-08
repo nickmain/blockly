@@ -8,73 +8,87 @@ import Image from '@site/src/components/Image';
 
 ## 6. Create a custom block
 
-Since this is a music maker app, we want a block that plays sounds. We could create one block per sound, but instead we will create a single block with a dropdown to select which note to play:
-
-<Image
-  src="/images/codelabs/getting-started/play_sound_block.png"
-  alt="image"
-  className="codelabImage"
-/>
+Blockly provides various blocks for math, strings, loops, and more. But the real power of a Blockly application comes from your custom blocks. 
+You can define blocks that are related to your application, such as one that plays a song, makes a robot move on the screen, or reports the temperature from a connected sensor.
 
 In Blockly, a _block definition_ describes how a block looks and behaves. This includes its text, colour, and shape. It may also include which other blocks it can connect to.
 
 Blocks can be defined in either JavaScript or JSON. The developer site has a full article on [how to define a block](/guides/create-custom-blocks/define/block-definitions#how-to-create-block-definitions).
+There are also opinionated guides on topics such as [block design](/guides/design/blocks) and [block appearance](/guides/design/appearance) that reflect recommended best practices when creating blocks.
 
-In this codelab we will simply provide the block definition for you to copy and use.
+In this codelab we will provide a custom block definition for you to copy and use.
 
-### Define the sound block
+### Define the add_text block
 
-Create a JS file to define a new "play sound" block:
+Imagine you want to build a block that adds text to the output div of this workspace. You'll start with the block definition and then add the ability to generate JavaScript code with that block. 
 
-1. Add `sound_blocks.js` file in the `scripts` directory.
-1. Add the following code to `sound_blocks.js`:
+Find the `text.js` file in `src/blocks/`. Here you'll specify your block definition. Add the following code to `text.js`:
 
 ```js
-Blockly.common.defineBlocksWithJsonArray([
-  {
-    type: 'play_sound',
-    message0: 'Play %1',
-    args0: [
-      {
-        type: 'field_dropdown',
-        name: 'VALUE',
-        options: [
-          ['C4', 'sounds/c4.m4a'],
-          ['D4', 'sounds/d4.m4a'],
-          ['E4', 'sounds/e4.m4a'],
-          ['F4', 'sounds/f4.m4a'],
-          ['G4', 'sounds/g4.m4a'],
-        ],
-      },
-    ],
-    previousStatement: null,
-    nextStatement: null,
-    colour: 355,
-  },
+import * as Blockly from 'blockly/core';
+
+// Create a custom block called 'add_text' that adds
+// text to the output div on the sample app.
+const addText = {
+  type: 'add_text',
+  message0: 'Add text %1',
+  args0: [
+    {
+      type: 'input_value',
+      name: 'TEXT',
+      check: 'String',
+    },
+  ],
+  previousStatement: null,
+  nextStatement: null,
+  colour: 160,
+  tooltip: '',
+  helpUrl: '',
+};
+```
+
+This block definition defines a block called `add_text` that has one `string` value input called `TEXT`. There is a message on the block that says "Add text" before the input. 
+The `add_text` block also has a previous connection and a next connection, allowing it to be stacked vertically. 
+
+The page on [Block structure in JSON](/guides/create-custom-blocks/define/structure-json) is a good resource for understanding the parts of a JSON block definition. 
+
+### Create Block Definition
+
+After declaring the JSON definition for the block, we'll need to turn it into the full block definition that Blockly can register later. 
+To do that, call `createBlockDefinitionsFromJsonArray` which turns the raw JSON object into the JavaScript block definition that Blockly will use.
+Then, we save that definition as an object called blocks which we will use in the next steps.
+Add the following code to the end of `text.js`, after your `addText` object.
+
+```js
+// Create the block definitions for the JSON-only blocks.
+// This does not register their definitions with Blockly.
+// This file has no side effects!
+export const blocks = Blockly.common.createBlockDefinitionsFromJsonArray([
+  addText,
 ]);
 ```
 
-Add a script tag to `index.html` to include your new block definition:
+### Register the custom block
 
-```html
-<script src="scripts/sound_blocks.js"></script>
-```
-
-Your sound block definitions must come after importing Blockly and before the other imports, since you will use Blockly functions in this file, and you will be using functions from this file in later files. Your imports should now look like this:
-
-```html
-<script src="https://unpkg.com/blockly"></script>
-<script src="scripts/sound_blocks.js"></script>
-<script src="scripts/music_maker.js"></script>
-<script src="scripts/main.js"></script>
-```
-
-### Add the sound block to the toolbox
-
-Now we can update the toolbox to include the new sound block, by adding `{'kind': 'block', 'type': 'play_sound'}` to our `toolbox` definition:
+The block is set up, now you need to register it. Add the following import statement and code to the top of the `index.js` file:
 
 ```js
-const toolbox = {
+import {blocks} from './blocks/text';
+```
+
+Just after the import statements, insert the following code in `index.js`. 
+This code uses the block definition that we just saved in order to add the custom `add_text` block to the list of available blocks: 
+
+```js
+Blockly.common.defineBlocks(blocks);
+```
+
+### Add the custom block to the toolbox
+
+Now you can update the toolbox to include the new block, by adding `{'kind': 'block', 'type': 'add_text'}` to the `toolbox` definition. The full toolbox should now be:
+
+```js
+export const toolbox = {
   kind: 'flyoutToolbox',
   contents: [
     {
@@ -85,7 +99,7 @@ const toolbox = {
           shadow: {
             type: 'math_number',
             fields: {
-              NUM: 5,
+              NUM: 3,
             },
           },
         },
@@ -93,19 +107,23 @@ const toolbox = {
     },
     {
       kind: 'block',
-      type: 'play_sound',
+      type: 'text',
     },
-  ],
+    {
+      kind: 'block',
+      type: 'add_text',
+    },
+  ]
 };
 ```
 
-Run the app one more time, and play around with the new `Play (sound)` block. It should look like this:
+Again, ensure that your files are saved, then check your `localhost` Blockly page. You should now see your custom `add_text` block in your toolbox! 
 
 <Image
-  src="/images/codelabs/getting-started/workspace_with_toolbox.png"
-  alt="image"
+  src="/images/codelabs/getting-started/full_page_second_toolbox.png"
+  alt="A webpage with a space for generated code, a Blockly toolbox with three blocks in it, and a Blockly workspace."
   className="codelabImage"
-/>
+/>   
 
 ### The block factory
 

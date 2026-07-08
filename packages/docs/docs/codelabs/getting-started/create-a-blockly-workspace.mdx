@@ -14,27 +14,33 @@ In this section you will learn how to add a workspace to your app, including how
 
 A Blockly workspace has two main components:
 
-- The area where the user assembles their blocks (the white area).
-- A toolbox that contains all blocks that are available to the user (the grey area).
+- A toolbox that contains all blocks that are available to the user (the grey area on the left).
+- The area where the user assembles their blocks (the white area on the right).  
 
 <Image
-  src="/images/codelabs/getting-started/d4_three_times.png"
-  alt="image"
+  src="/images/codelabs/getting-started/workspace_with_toolbox.png"
+  alt="A Blockly toolbox and workspace with three connected blocks in the workspace."
   className="codelabImage"
-/>
+/>   
 
-The toolbox may be organized into categories, and may contain both single blocks and groups of blocks. A well-organized toolbox helps the user to explore the available blocks and understand the capabilities of the underlying system.
+Users can drag blocks out of the toolbox and into their workspace to assemble a program. 
+
+The toolbox may be organized into categories (a *category* toolbox) or have all blocks visible at all times (a *flyout* toolbox). Toolboxes may contain both single blocks or groups of blocks. 
+A well-organized toolbox helps the user to explore the available blocks and understand the capabilities of the underlying system.
 
 A toolbox is defined as a JavaScript object and passed into the workspace constructor through an options struct.
 
-For more information on this JSON format and toolbox configuration, including category creation, please see our <a href="/guides/configure/toolboxes/toolbox">toolbox documentation</a>.
+For more information on this JSON format and toolbox configuration, including category creation, please see our [toolbox documentation](/guides/configure/toolboxes/toolbox).
+If you'd like to customize the appearance of your toolbox, you can consult the [toolbox customization codelab](/codelabs/custom-toolbox/codelab-overview/).
 
 ### Define the toolbox
 
-Open up `scripts/main.js` and scroll down to the end of the file. Then add the code for your `toolbox` definition just after the call to `enableMakerMode()`:
+Find the file in your `src/` folder called `toolbox.js`. This is where you'll define your toolbox using the JSON format. 
+
+Add the following toolbox definition to `toolbox.js`: 
 
 ```js
-const toolbox = {
+export const toolbox = {
   kind: 'flyoutToolbox',
   contents: [
     {
@@ -45,17 +51,21 @@ const toolbox = {
           shadow: {
             type: 'math_number',
             fields: {
-              NUM: 5,
+              NUM: 3,
             },
           },
         },
       },
     },
-  ],
+    {
+      kind: 'block',
+      type: 'text',
+    },
+  ]
 };
 ```
 
-This JavaScript object defines a toolbox with a single "repeat loop" block.
+This JavaScript object defines a flyout toolbox with a loop block and a text block.
 
 ### Injection
 
@@ -66,42 +76,57 @@ To do this you call the function `Blockly.inject(container, options)`, which tak
 - `container` is where the Blockly workspace should be placed on the page. It can be an `Element`, an ID string, or a CSS selector.
 - `options` is a dictionary of configuration options.
 
-For this codelab we will inject into a div with the id `"blocklyDiv"`, which you can find in `index.html`:
+For this codelab we will inject into a div with the id `"blocklyDiv"`, which was already created in `index.html`.
 
 ```html
-<div id="blocklyDiv" style="height: 480px; width: 400px;"></div>
+<div id="blocklyDiv"></div>
 ```
 
 ### Create the workspace
 
-Now add code to inject the Blockly editor just after the code you used to define your toolbox:
+Now, in `src/index.js`, import the toolbox you just created. 
+Then, set up variables for each major div in `index.html` so that you can later reference these UI elements.
+Finally, you'll inject Blockly using the toolbox you just created. 
 
+Copy and paste the full code into your `index.js`: 
 ```js
-Blockly.inject('blocklyDiv', {
-  toolbox: toolbox,
-  scrollbars: false,
-  horizontalLayout: true,
-  toolboxPosition: 'end',
-});
+import * as Blockly from 'blockly';
+import {toolbox} from './toolbox';
+import './index.css'
+
+// Set up UI elements and inject Blockly
+const codeDiv = document.getElementById('generatedCode').firstChild;
+const outputDiv = document.getElementById('output');
+const blocklyDiv = document.getElementById('blocklyDiv');
+
+const ws = Blockly.inject(blocklyDiv, {toolbox});
 ```
 
-Let's look at the options we used to initialize your blockly editor:
+`Blockly.inject` allows you to specify some options regarding what your workspace and toolbox look like. 
+In this case, the only configuration option you selected was `toolbox` which lets you add a toolbox definition to your instance of Blockly. 
 
-- `toolbox`: A JavaScript object which defines the toolbox for the editor.
-- `scrollbars`: Whether to show scrollbars in the workspace.
-- `horizontalLayout`: Whether to display the toolbox horizontally or vertically in the workspace.
-- `toolboxPosition`: Whether to show the toolbox at the top or bottom of the workspace.
+The `options` struct offers many additional options which give you significant control over your Blockly's instance.
 
-The `options` struct gives you significant control over your Blockly instance. You can pass options to set Blockly's theme, modify scrolling behaviour, set the renderer, and more. For more information, head over to Blockly's developer site and check out the [configuration](/guides/configure/configuration_struct#the-options-dictionary) section.
+For example: 
+- `scrollbars`: Whether to show scrollbars in the workspace. If a toolbox is a flyout toolbox (like the one you just defined), `scrollbars` defaults to `false`. 
+- `horizontalLayout`: Whether to display the toolbox horizontally (`true`) or vertically (`false`) in the workspace. Defaults to `false`/vertical. 
+- `toolboxPosition`: Controls the position of the toolbox in the workspace. It defaults to the left side if the layout is vertical. 
+- `maxBlocks`: The maximum number of blocks that may be created in the workspace. 
+
+There are more options available which can change the appearance or behavior of Blockly. For a list of all the available options, see the [configuration](/guides/configure/configuration_struct#the-options-dictionary) documentation.
 
 ### Check your work
 
-Now refresh the page. Select the EDIT mode, then tap on one of the buttons. You should see a Blockly editor:
+Make sure that all the files you've added code to (`index.html`, `toolbox.js`, and `index.js`) are saved. You may also need to refresh your `localhost` page. 
+
+You should now see your Blockly workspace. Click on one of the blocks in the toolbox and drag it into the workspace, then let go. You've just added your first block to the workspace!
+
+:::tip
+Blockly is keyboard navigable. Check out the [keyboard navigation guide](/guides/configure/keyboard-nav/#try-it), then try to add another block without using your mouse.
+:::
 
 <Image
-  src="/images/codelabs/getting-started/workspace_with_loop.png"
-  alt="image"
+  src="/images/codelabs/getting-started/full_page_first_toolbox.png"
+  alt="A webpage with a space for generated code, a Blockly toolbox with two blocks in it, and a Blockly workspace with one block in it."
   className="codelabImage"
-/>
-
-Drag and drop the available loop block to the workspace to test it out.
+/>   

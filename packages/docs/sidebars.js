@@ -46,13 +46,13 @@ const sidebars = {
         },
         {
           type: 'doc',
-          label: '3. Explore the app',
-          id: 'codelabs/getting-started/explore-the-app',
+          label: '3. Add Blockly libraries',
+          id: 'codelabs/getting-started/add-blockly-libraries',
         },
         {
           type: 'doc',
-          label: '4. Add Blockly libraries',
-          id: 'codelabs/getting-started/add-blockly-libraries',
+          label: '4. Add basic HTML and CSS',
+          id: 'codelabs/getting-started/create-base-app',
         },
         {
           type: 'doc',
@@ -478,6 +478,11 @@ const sidebars = {
               type: 'link',
               label: 'Get started codelab',
               href: '/codelabs/getting-started/codelab-overview',
+            },
+            {
+              type: 'doc',
+              label: 'Blockly Sample App',
+              id: 'guides/get-started/sample-app-overview',
             },
             {
               type: 'link',
