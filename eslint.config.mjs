@@ -1,8 +1,10 @@
 import eslint from '@eslint/js';
 import googleStyle from 'eslint-config-google';
 import jsdoc from 'eslint-plugin-jsdoc';
+import * as mdx from 'eslint-plugin-mdx';
 import mochaPlugin from 'eslint-plugin-mocha';
 import eslintPluginPrettierRecommended from 'eslint-plugin-prettier/recommended';
+import {defineConfig} from 'eslint/config';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
@@ -133,41 +135,64 @@ function buildTSOverride({files, tsconfig}) {
   };
 }
 
-export default [
+export default defineConfig(
   {
     // Note: there should be no other properties in this object
     ignores: [
       // Build artifacts
-      'msg/*',
-      'build/*',
-      'dist/*',
-      'typings/*',
-      'docs/*',
+      'packages/blockly/msg/*',
+      'packages/blockly/build/*',
+      'packages/blockly/dist/*',
+      'packages/blockly/typings/*',
+      'packages/blockly/docs/*',
       // Tests other than mocha unit tests
-      'tests/blocks/*',
-      'tests/themes/*',
-      'tests/compile/*',
-      'tests/jsunit/*',
-      'tests/generators/*',
-      'tests/mocha/webdriver.js',
-      'tests/screenshot/*',
-      'tests/test_runner.js',
-      'tests/workspace_svg/*',
+      'packages/blockly/tests/blocks/*',
+      'packages/blockly/tests/themes/*',
+      'packages/blockly/tests/compile/*',
+      'packages/blockly/tests/jsunit/*',
+      'packages/blockly/tests/generators/*',
+      'packages/blockly/tests/mocha/webdriver.js',
+      'packages/blockly/tests/screenshot/*',
+      'packages/blockly/tests/test_runner.js',
+      'packages/blockly/tests/workspace_svg/*',
       // Demos, scripts, misc
-      'node_modules/*',
-      'generators/*',
-      'demos/*',
-      'appengine/*',
-      'externs/*',
-      'closure/*',
-      'scripts/gulpfiles/*',
-      'CHANGELOG.md',
-      'PULL_REQUEST_TEMPLATE.md',
+      'packages/blockly/node_modules/*',
+      'packages/blockly/generators/*',
+      'packages/blockly/demos/*',
+      'packages/blockly/appengine/*',
+      'packages/blockly/externs/*',
+      'packages/blockly/closure/*',
+      'packages/blockly/scripts/gulpfiles/*',
+      'packages/blockly/CHANGELOG.md',
+      'packages/blockly/PULL_REQUEST_TEMPLATE.md',
+      // Docs
+      'packages/docs/docs/reference/**',
+      'packages/docs/build/**',
+      'packages/docs/.docusaurus/**',
+      'packages/docs/node_modules/**',
     ],
   },
-  eslint.configs.recommended,
   jsdoc.configs['flat/recommended'],
-  googleStyle,
+  {
+    files: ['packages/blockly/**/*.ts', 'packages/blockly/**/*.tsx', 'packages/blockly/**/*.js'],
+    extends: [eslint.configs.recommended, googleStyle],
+    languageOptions: {
+      ecmaVersion: 2020,
+      sourceType: 'module',
+    },
+    settings: {
+      // Allowlist some JSDoc tag aliases we use.
+      'jsdoc': {
+        'tagNamePreference': {
+          'return': 'return',
+          'fileoverview': 'fileoverview',
+          'extends': 'extends',
+          'constructor': 'constructor',
+        },
+      },
+    },
+    rules,
+  },
   {
     languageOptions: {
       ecmaVersion: 2020,
@@ -188,14 +213,14 @@ export default [
   },
   {
     files: [
-      'eslint.config.mjs',
-      '.prettierrc.js',
-      'gulpfile.mjs',
-      'scripts/helpers.js',
-      'tests/mocha/.mocharc.js',
-      'tests/migration/validate-renamings.mjs',
-      'tests/scripts/magic_symlink.js',
-      'tests/scripts/webdriver_helpers.js',
+      'packages/blockly/eslint.config.mjs',
+      'packages/blockly/.prettierrc.js',
+      'packages/blockly/gulpfile.mjs',
+      'packages/blockly/scripts/helpers.js',
+      'packages/blockly/tests/mocha/.mocharc.js',
+      'packages/blockly/tests/migration/validate-renamings.mjs',
+      'packages/blockly/tests/scripts/magic_symlink.js',
+      'packages/blockly/tests/scripts/webdriver_helpers.js',
     ],
     languageOptions: {
       globals: {
@@ -207,7 +232,7 @@ export default [
     },
   },
   {
-    files: ['tests/**'],
+    files: ['packages/blockly/tests/**'],
     plugins: {
       mocha: mochaPlugin,
     },
@@ -237,7 +262,7 @@ export default [
     },
   },
   {
-    files: ['tests/browser/**'],
+    files: ['packages/blockly/tests/browser/**'],
     languageOptions: {
       sourceType: 'module',
       globals: {
@@ -257,7 +282,7 @@ export default [
     },
   },
   {
-    files: ['tests/mocha/**'],
+    files: ['packages/blockly/tests/mocha/**'],
     languageOptions: {
       sourceType: 'module',
       globals: {
@@ -276,7 +301,7 @@ export default [
     },
   },
   {
-    files: ['tests/node/**'],
+    files: ['packages/blockly/tests/node/**'],
     languageOptions: {
       globals: {
         'console': true,
@@ -287,7 +312,7 @@ export default [
     },
   },
   {
-    files: ['tests/playgrounds/**', 'tests/scripts/**'],
+    files: ['packages/blockly/tests/playgrounds/**', 'packages/blockly/tests/scripts/**'],
     languageOptions: {
       globals: {
         ...globals.browser,
@@ -295,7 +320,7 @@ export default [
     },
   },
   {
-    files: ['scripts/**'],
+    files: ['packages/blockly/scripts/**'],
     languageOptions: {
       globals: {
         ...globals.browser,
@@ -307,17 +332,35 @@ export default [
       'jsdoc/tag-lines': ['off'],
     },
   },
+  {
+    ...mdx.flat,
+    files: ['packages/docs/**/*.mdx'],
+    rules: {
+      ...mdx.flat.rules,
+      'mdx/remark': 'off',
+    },
+  },
+  {
+    ...mdx.flat,
+    files: ['packages/docs/**/*.md'],
+    ...mdx.flatCodeBlocks,
+    rules: {
+      ...mdx.flat.rules,
+      ...mdx.flatCodeBlocks.rules,
+      'mdx/remark': 'off',
+    },
+  },
   ...tseslint.config(
     buildTSOverride({
-      files: ['**/*.ts', '**/*.tsx'],
+      files: ['packages/blockly/**/*.ts', 'packages/blockly/**/*.tsx'],
       tsconfig: './tsconfig.json',
     }),
     buildTSOverride({
-      files: ['tests/typescript/**/*.ts', 'tests/typescript/**/*.tsx'],
+      files: ['packages/blockly/tests/typescript/**/*.ts', 'packages/blockly/tests/typescript/**/*.tsx'],
       tsconfig: './tests/typescript/tsconfig.json',
     }),
   ),
   // Per the docs, this should be at the end because it disables rules that
   // conflict with Prettier.
   eslintPluginPrettierRecommended,
-];
+);
