@@ -29,13 +29,16 @@
     "eslint-plugin-jsdoc": "^63.0.11",
     "eslint-plugin-mdx": "^3.7.0",
     "eslint-plugin-mocha": "^11.3.0",
-    "eslint-plugin-prettier": "^5.5.5"
+    "eslint-plugin-prettier": "^5.5.5",
+    "prettier": "3.8.4",
+    "prettier-plugin-organize-imports": "^4.3.0"
   },
   "scripts": {
     "test": "npm run test --ws --if-present",
     "lint": "npm run lint --ws --if-present",
     "build": "npm run build --ws --if-present",
-    "format:check": "npm run format:check --ws --if-present",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "postinstall": "patch-package"
   }
 }

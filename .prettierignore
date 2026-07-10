@@ -1,0 +1,48 @@
+# Root-level
+.github
+.prettierrc.js
+eslint.config.mjs
+package.json
+
+# Core: Build Artifacts
+packages/blockly/msg/*
+packages/blockly/build/*
+packages/blockly/dist/*
+packages/blockly/typings/*
+packages/blockly/docs/*
+
+# Core: Tests other than mocha unit tests
+packages/blockly/tests/blocks/*
+packages/blockly/tests/themes/*
+packages/blockly/tests/compile/*
+packages/blockly/tests/jsunit/*
+packages/blockly/tests/generators/*
+packages/blockly/tests/mocha/webdriver.js
+packages/blockly/tests/screenshot/*
+packages/blockly/tests/test_runner.js
+packages/blockly/tests/workspace_svg/*
+
+# Core: Demos, scripts, misc
+packages/blockly/node_modules/*
+packages/blockly/demos/*
+packages/blockly/appengine/*
+packages/blockly/externs/*
+packages/blockly/closure/*
+packages/blockly/scripts/gulpfiles/*
+packages/blockly/CHANGELOG.md
+packages/blockly/PULL_REQUEST_TEMPLATE.md
+
+# Core: Don't bother formatting JavaScript files we're about to migrate:
+packages/blockly/generators/**/*.js
+
+# Docs: Markdown/MDX (linted by ESLint + eslint-plugin-mdx instead)
+packages/docs/**/*.md
+packages/docs/**/*.mdx
+
+# Docs: Build artifacts
+packages/docs/build/
+packages/docs/.docusaurus/
+packages/docs/node_modules/
+
+# Docs: Auto-generated
+packages/docs/CHANGELOG.md

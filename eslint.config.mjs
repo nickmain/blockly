@@ -192,6 +192,9 @@ export default defineConfig(
       },
     },
     rules,
+    // Per the docs, this should be at the end because it disables rules that
+    // conflict with Prettier.
+    ...eslintPluginPrettierRecommended,
   },
   {
     languageOptions: {
@@ -360,7 +363,4 @@ export default defineConfig(
       tsconfig: './tests/typescript/tsconfig.json',
     }),
   ),
-  // Per the docs, this should be at the end because it disables rules that
-  // conflict with Prettier.
-  eslintPluginPrettierRecommended,
 );
