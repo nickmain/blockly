@@ -15,11 +15,6 @@ tsdoc-metadata.json
 # Core
 packages/blockly/tests/compile/main_compressed.js
 packages/blockly/tests/compile/main_compressed.js.map
-packages/blockly/tests/compile/*compiler*.jar
-packages/blockly/tests/screenshot/outputs/*
-packages/blockly/local_build/*compiler*.jar
-packages/blockly/local_build/local_*_compressed.js
-packages/blockly/chromedriver
 packages/blockly/build/
 packages/blockly/dist/
 packages/blockly/temp/
