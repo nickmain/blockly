@@ -15,6 +15,10 @@ updates:
     labels:
       - 'PR: chore'
       - 'PR: dependencies'
+    groups:
+      docusaurus:
+        patterns:
+          - '@docusaurus/*'
   - package-ecosystem: 'github-actions' # See documentation for possible values
     directory: '/'
     target-branch: 'main'
