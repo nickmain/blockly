@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2020 Google LLC
+ * Copyright 2026 Raspberry Pi Foundation
  * SPDX-License-Identifier: Apache-2.0
  */
 
@@ -9,15 +9,9 @@
  * @author aschmiedt@google.com (Abby Schmiedt)
  */
 
-class CustomCategory extends Blockly.ToolboxCategory {
-  /**
-   * Constructor for a custom category.
-   * @override
-   */
-  constructor(categoryDef, toolbox, opt_parent) {
-    super(categoryDef, toolbox, opt_parent);
-  }
+import * as Blockly from 'blockly';
 
+class CustomCategory extends Blockly.ToolboxCategory {
   /**
    * Adds the colour to the toolbox.
    * This is called on category creation and whenever the theme changes.
@@ -34,6 +28,7 @@ class CustomCategory extends Blockly.ToolboxCategory {
    * @override
    */
   setSelected(isSelected) {
+    super.setSelected(isSelected);
     // We do not store the label span on the category, so use getElementsByClassName.
     const labelDom = this.rowDiv_.getElementsByClassName(
       'blocklyToolboxCategoryLabel',
@@ -51,12 +46,6 @@ class CustomCategory extends Blockly.ToolboxCategory {
       labelDom.style.color = 'white';
       this.iconDom_.style.color = 'white';
     }
-    // This is used for accessibility purposes.
-    Blockly.utils.aria.setState(
-      /** @type {!Element} */ (this.htmlDiv_),
-      Blockly.utils.aria.State.SELECTED,
-      isSelected,
-    );
   }
 
   /**
@@ -65,18 +54,17 @@ class CustomCategory extends Blockly.ToolboxCategory {
    * @override
    */
   createIconDom_() {
-    const iconImg = document.createElement('img');
-    iconImg.src = './logo_only.svg';
-    iconImg.alt = 'Blockly Logo';
-    iconImg.width = '25';
-    iconImg.height = '25';
-    return iconImg;
+    const icon = document.createElement('span');
+    icon.textContent = '🧰';
+    return icon;
   }
 }
 
-Blockly.registry.register(
-  Blockly.registry.Type.TOOLBOX_ITEM,
-  Blockly.ToolboxCategory.registrationName,
-  CustomCategory,
-  true,
-);
+export function registerCustomCategory() {
+  Blockly.registry.register(
+    Blockly.registry.Type.TOOLBOX_ITEM,
+    Blockly.ToolboxCategory.registrationName,
+    CustomCategory,
+    true,
+  );
+}
